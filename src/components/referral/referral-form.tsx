@@ -154,6 +154,7 @@ export function ReferralForm() {
                 type="button"
                 onClick={() => deleteProspect(index)}
                 className="flex bg-transparent border-none text-lg text-red-500 cursor-pointer mb-3 self-end hover:text-red-700"
+                aria-label="Delete prospect"
               >
                 <Image src="/assets/trash.png" alt="Delete" width={18} height={18} />
               </button>
@@ -195,6 +196,7 @@ export function ReferralForm() {
             type="button"
             onClick={addProspect}
             className="flex w-auto h-8 justify-center items-center shrink-0 rounded-lg bg-prfc-brown text-white cursor-pointer"
+            aria-label="Add prospect"
           >
             <Plus className="h-6 w-6" strokeWidth={2} />
           </button>
