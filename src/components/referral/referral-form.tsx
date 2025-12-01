@@ -1,0 +1,214 @@
+"use client";
+
+import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import Image from "next/image";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+interface Prospect {
+  email: string;
+  fullName: string;
+}
+
+export function ReferralForm() {
+  const searchParams = useSearchParams();
+
+  // Derive referrer info directly from URL params (no state needed)
+  const fullName = (searchParams?.get("nm") || "").trim();
+  const nameParts = fullName.split(" ");
+  const referrerFirstName = nameParts[0] || "";
+  const referrerLastName = nameParts.slice(1).join(" ") || "";
+  const referrerEmail = searchParams?.get("em") || "";
+  const referralCode = searchParams?.get("ref") || "";
+
+  // Lazy initialization for yourEmail (gets cleared on success)
+  const [yourEmail, setYourEmail] = useState(() => searchParams?.get("em") || "");
+  const [prospects, setProspects] = useState<Prospect[]>([{ email: "", fullName: "" }]);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [showConfirmation, setShowConfirmation] = useState(false);
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setErrorMessage("");
+
+    for (let i = 0; i < prospects.length; i++) {
+      const prospect = prospects[i];
+      if (!prospect.email.trim() || !prospect.fullName.trim()) {
+        setErrorMessage(`Please fill out all fields for Prospect ${i + 1}.`);
+        return;
+      }
+    }
+
+    const em = referrerEmail;
+    const nm = `${referrerFirstName} ${referrerLastName}`;
+    const ref = referralCode;
+    const cs = searchParams?.get("cs");
+
+    if (!cs) {
+      setErrorMessage("Invalid URL: Missing checksum.");
+      return;
+    }
+
+    try {
+      const checksumResponse = await fetch("/api/checksum", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ em, nm, ref, cs }),
+      });
+
+      if (!checksumResponse.ok) {
+        const errorBody = await checksumResponse.json();
+        setErrorMessage(errorBody.error?.message || "Checksum validation failed.");
+        return;
+      }
+
+      const referralData = {
+        memberName: nm.trim(),
+        memberEmail: em,
+        referralCode: ref,
+        prospects: prospects.map((prospect) => ({
+          prospectName: prospect.fullName.trim(),
+          prospectEmail: prospect.email,
+        })),
+      };
+
+      const response = await fetch("/api/referral", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(referralData),
+      });
+
+      if (response.ok) {
+        setProspects([{ email: "", fullName: "" }]);
+        setYourEmail("");
+        setShowConfirmation(true);
+      } else {
+        const errorBody = await response.json();
+        setErrorMessage(errorBody.error?.message || "Failed to submit the form. Please try again!");
+      }
+    } catch {
+      setErrorMessage("An error occurred while submitting the form.");
+    }
+  };
+
+  const handleProspectChange = (index: number, field: "email" | "fullName", value: string) => {
+    const newProspects = [...prospects];
+    newProspects[index][field] = value;
+    setProspects(newProspects);
+  };
+
+  const addProspect = () => {
+    if (prospects.length >= 5) {
+      setErrorMessage("You can only refer up to 5 prospects at a time.");
+      return;
+    }
+    setProspects([...prospects, { email: "", fullName: "" }]);
+    setErrorMessage("");
+  };
+
+  const deleteProspect = (index: number) => {
+    const newProspects = [...prospects];
+    newProspects.splice(index, 1);
+    setProspects(newProspects);
+    if (errorMessage) {
+      setErrorMessage("");
+    }
+  };
+
+  return (
+    <div className="w-full max-w-[800px] rounded-2xl flex flex-col justify-center items-start">
+      <Dialog open={showConfirmation} onOpenChange={setShowConfirmation}>
+        <DialogContent className="bg-white p-5 rounded-lg text-center">
+          <DialogHeader>
+            <DialogTitle className="text-xl">Success!</DialogTitle>
+            <DialogDescription className="text-lg">Referral submitted successfully!</DialogDescription>
+          </DialogHeader>
+          <Button
+            onClick={() => setShowConfirmation(false)}
+            className="mt-[10px] px-4 py-2 bg-prfc-red hover:bg-prfc-red/90 rounded"
+          >
+            Close
+          </Button>
+        </DialogContent>
+      </Dialog>
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-7 w-full">
+        <div className="flex flex-row gap-2 items-start w-full">
+          <Input
+            type="email"
+            value={yourEmail}
+            onChange={(e) => setYourEmail(e.target.value)}
+            placeholder="Referrer's Email Address"
+            className="flex-1 min-w-0 px-[18px] py-3 rounded-lg border-2 border-prfc-brown bg-white"
+            readOnly
+          />
+        </div>
+
+        <div className="w-full h-[15vh] max-h-[15vh] overflow-y-auto">
+          {prospects.map((prospect, index) => (
+            <div key={index} className="relative flex w-full mb-[1vh] gap-2">
+              <button
+                type="button"
+                onClick={() => deleteProspect(index)}
+                className="flex bg-transparent border-none text-lg text-red-500 cursor-pointer mb-3 self-end hover:text-red-700"
+              >
+                <Image src="/assets/trash.png" alt="Delete" width={18} height={18} />
+              </button>
+              <div className="flex flex-col md:flex-row w-full gap-2">
+                <div className="flex max-[480px]:flex-col gap-2 w-full flex-wrap md:flex-1">
+                  <Input
+                    type="text"
+                    value={prospect.fullName}
+                    onChange={(e) => handleProspectChange(index, "fullName", e.target.value)}
+                    placeholder="Enter Referee Full Name"
+                    className="flex-1 min-w-0 px-[18px] py-3 rounded-lg border-2 border-prfc-brown bg-white"
+                  />
+                </div>
+                <div className="flex justify-center items-center gap-4 w-full md:flex-1">
+                  <Input
+                    type="email"
+                    value={prospect.email}
+                    onChange={(e) => handleProspectChange(index, "email", e.target.value)}
+                    placeholder="Enter Referee Email Address"
+                    className="w-full px-[18px] py-3 rounded-lg border-2 border-prfc-brown bg-white"
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <Button
+          type="submit"
+          className="self-end px-6 py-2 bg-prfc-red text-white text-[1.125rem] font-extralight rounded-lg hover:bg-prfc-red/90"
+        >
+          Invite
+        </Button>
+
+        {errorMessage && <p className="text-red-500 font-bold self-end -mt-6">{errorMessage}</p>}
+
+        {prospects.length < 5 ? (
+          <button
+            type="button"
+            onClick={addProspect}
+            className="flex w-auto h-8 justify-center items-center shrink-0 rounded-lg bg-prfc-brown text-white cursor-pointer"
+          >
+            <Plus className="h-6 w-6" strokeWidth={2} />
+          </button>
+        ) : (
+          <p className="text-[1.8rem] font-semibold text-[#7b3f00] m-0">You've reached the max of 5 referrals.</p>
+        )}
+
+        <input type="hidden" name="referrerEmail" value={referrerEmail} />
+        <input type="hidden" name="referrerFirstName" value={referrerFirstName} />
+        <input type="hidden" name="referrerLastName" value={referrerLastName} />
+        <input type="hidden" name="referralCode" value={referralCode} />
+      </form>
+    </div>
+  );
+}
+
+export default ReferralForm;
