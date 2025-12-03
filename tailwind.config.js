@@ -15,6 +15,7 @@ module.exports = {
         "prfc-cream": "#EDDDCC",
         "prfc-dark-brown": "#3e1c00",
         "prfc-border": "#968676",
+        "prfc-blue": "#1976d2",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         card: {
