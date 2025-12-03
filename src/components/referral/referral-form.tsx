@@ -153,30 +153,26 @@ export function ReferralForm() {
               <button
                 type="button"
                 onClick={() => deleteProspect(index)}
-                className="flex bg-transparent border-none text-lg text-red-500 cursor-pointer mb-3 self-end hover:text-red-700"
+                className="flex min-h-[44px] min-w-[44px] items-center justify-center bg-transparent border-none text-red-500 cursor-pointer self-end hover:text-red-700"
                 aria-label="Delete prospect"
               >
                 <Image src="/assets/trash.png" alt="Delete" width={18} height={18} />
               </button>
-              <div className="flex flex-col md:flex-row w-full gap-2">
-                <div className="flex max-[480px]:flex-col gap-2 w-full flex-wrap md:flex-1">
-                  <Input
-                    type="text"
-                    value={prospect.fullName}
-                    onChange={(e) => handleProspectChange(index, "fullName", e.target.value)}
-                    placeholder="Enter Referee Full Name"
-                    className="flex-1 min-w-0 px-[18px] py-3 rounded-lg border-2 border-prfc-brown bg-white"
-                  />
-                </div>
-                <div className="flex justify-center items-center gap-4 w-full md:flex-1">
-                  <Input
-                    type="email"
-                    value={prospect.email}
-                    onChange={(e) => handleProspectChange(index, "email", e.target.value)}
-                    placeholder="Enter Referee Email Address"
-                    className="w-full px-[18px] py-3 rounded-lg border-2 border-prfc-brown bg-white"
-                  />
-                </div>
+              <div className="flex flex-col md:flex-row md:items-center w-full gap-2">
+                <Input
+                  type="text"
+                  value={prospect.fullName}
+                  onChange={(e) => handleProspectChange(index, "fullName", e.target.value)}
+                  placeholder="Enter Referee Full Name"
+                  className="flex-1 min-w-0 px-[18px] py-3 rounded-lg border-2 border-prfc-brown bg-white"
+                />
+                <Input
+                  type="email"
+                  value={prospect.email}
+                  onChange={(e) => handleProspectChange(index, "email", e.target.value)}
+                  placeholder="Enter Referee Email Address"
+                  className="flex-1 min-w-0 px-[18px] py-3 rounded-lg border-2 border-prfc-brown bg-white"
+                />
               </div>
             </div>
           ))}
