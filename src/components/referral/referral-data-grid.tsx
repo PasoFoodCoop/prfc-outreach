@@ -40,6 +40,9 @@ import { SlidersHorizontal } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { Referral } from "@/schema/referral";
+import { operatorFilter, filterOperators, type FilterOperator, type ColumnFilterValue } from "@/lib/table-filters";
+import { useToast } from "@/hooks/use-toast";
+import { useReferrals } from "@/hooks/use-referrals";
 
 type Density = "compact" | "standard" | "comfortable";
 
@@ -69,18 +72,6 @@ const filterableColumns = [
   { id: "referralCode", label: "Code" },
 ];
 
-const filterOperators = [
-  { value: "contains", label: "contains" },
-  { value: "doesNotContain", label: "does not contain" },
-  { value: "equals", label: "equals" },
-  { value: "doesNotEqual", label: "does not equal" },
-  { value: "startsWith", label: "starts with" },
-  { value: "endsWith", label: "ends with" },
-  { value: "isEmpty", label: "is empty" },
-  { value: "isNotEmpty", label: "is not empty" },
-  { value: "isAnyOf", label: "is any of" },
-];
-
 const MOBILE_HIDDEN_COLUMNS = ["createdAt", "memberEmail", "prospectEmail", "referralCode"];
 const STORAGE_KEY = "referral-table-columns";
 
@@ -97,7 +88,7 @@ interface ReferralDataGridProps {
 }
 
 export function ReferralDataGrid({ initialIsMobile }: ReferralDataGridProps) {
-  const [referrals, setReferrals] = useState<Referral[]>([]);
+  const { data: referrals, error, toggleRedeemed } = useReferrals();
   const [sorting, setSorting] = useState<SortingState>([{ id: "createdAt", desc: true }]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() =>
@@ -109,20 +100,21 @@ export function ReferralDataGrid({ initialIsMobile }: ReferralDataGridProps) {
 
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [filterColumn, setFilterColumn] = useState("createdAt");
-  const [filterOperator, setFilterOperator] = useState("contains");
+  const [filterOperator, setFilterOperator] = useState<FilterOperator>("contains");
   const [filterValue, setFilterValue] = useState("");
   const [columnSearch, setColumnSearch] = useState("");
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
         setColumnVisibility(JSON.parse(stored));
         return;
-      } catch {
-        // Invalid JSON, use viewport detection below
       }
+    } catch (error) {
+      console.warn("Failed to load column preferences:", error);
     }
 
     const actualIsMobile = window.innerWidth < 768;
@@ -135,7 +127,11 @@ export function ReferralDataGrid({ initialIsMobile }: ReferralDataGridProps) {
     (updater: VisibilityState | ((prev: VisibilityState) => VisibilityState)) => {
       setColumnVisibility((prev) => {
         const newState = typeof updater === "function" ? updater(prev) : updater;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
+        } catch (error) {
+          console.warn("Failed to save column preferences:", error);
+        }
         return newState;
       });
     },
@@ -143,34 +139,10 @@ export function ReferralDataGrid({ initialIsMobile }: ReferralDataGridProps) {
   );
 
   useEffect(() => {
-    const fetchReferrals = async () => {
-      try {
-        const response = await fetch("/api/referral");
-        if (!response.ok) throw new Error("Failed to fetch referrals");
-        const data = await response.json();
-        setReferrals(data);
-      } catch (error) {
-        console.error("Error fetching referrals:", error);
-      }
-    };
-    fetchReferrals();
-  }, []);
-
-  const handleToggleRedeemed = useCallback(async (id: number, currentValue: boolean) => {
-    setReferrals((prev) => prev.map((ref) => (ref.id === id ? { ...ref, redeemed: !currentValue } : ref)));
-
-    try {
-      const response = await fetch(`/api/referral/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-      });
-
-      if (!response.ok) throw new Error("Failed to update referral");
-    } catch (error) {
-      console.error("Error updating referral:", error);
-      setReferrals((prev) => prev.map((ref) => (ref.id === id ? { ...ref, redeemed: currentValue } : ref)));
+    if (error) {
+      toast({ title: "Failed to load referrals", variant: "destructive" });
     }
-  }, []);
+  }, [error, toast]);
 
   const formatDate = useCallback((date: string | Date) => {
     return new Intl.DateTimeFormat("en-US", {
@@ -208,28 +180,34 @@ export function ReferralDataGrid({ initialIsMobile }: ReferralDataGridProps) {
         accessorKey: "createdAt",
         header: "Date",
         cell: ({ row }) => formatDate(row.getValue("createdAt")),
+        filterFn: operatorFilter,
       },
       {
         accessorKey: "memberName",
         header: "Member Name",
         enableHiding: false,
+        filterFn: operatorFilter,
       },
       {
         accessorKey: "memberEmail",
         header: "Member Email",
+        filterFn: operatorFilter,
       },
       {
         accessorKey: "prospectName",
         header: "Prospect Name",
         enableHiding: false,
+        filterFn: operatorFilter,
       },
       {
         accessorKey: "prospectEmail",
         header: "Prospect Email",
+        filterFn: operatorFilter,
       },
       {
         accessorKey: "referralCode",
         header: "Code",
+        filterFn: operatorFilter,
       },
       {
         accessorKey: "redeemed",
@@ -239,14 +217,14 @@ export function ReferralDataGrid({ initialIsMobile }: ReferralDataGridProps) {
           <div className="flex justify-center">
             <Switch
               checked={row.getValue("redeemed")}
-              onCheckedChange={() => handleToggleRedeemed(row.original.id, row.getValue("redeemed"))}
+              onCheckedChange={() => toggleRedeemed(row.original.id, row.getValue("redeemed"))}
               aria-label="Toggle redeemed status"
             />
           </div>
         ),
       },
     ],
-    [formatDate, handleToggleRedeemed],
+    [formatDate, toggleRedeemed],
   );
 
   const table = useReactTable({
@@ -294,7 +272,11 @@ export function ReferralDataGrid({ initialIsMobile }: ReferralDataGridProps) {
   }, [handleShowHideAll]);
 
   const handleResetToDefaults = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch (error) {
+      console.warn("Failed to clear column preferences:", error);
+    }
     const isMobile = window.innerWidth < 768;
     setColumnVisibility(getDefaultVisibility(isMobile));
   }, []);
@@ -387,7 +369,7 @@ export function ReferralDataGrid({ initialIsMobile }: ReferralDataGridProps) {
               >
                 <SlidersHorizontal className="h-5 w-5" />
                 {(isFiltered || hiddenColumnCount > 0) && (
-                  <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-[#1976d2]" />
+                  <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-prfc-blue" />
                 )}
               </Button>
             </DrawerTrigger>
@@ -398,13 +380,13 @@ export function ReferralDataGrid({ initialIsMobile }: ReferralDataGridProps) {
               <div className="space-y-6 px-4 pb-4 overflow-y-auto">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <h3 className="font-medium" style={{ color: "#1976d2" }}>
+                    <h3 className="font-medium text-prfc-blue">
                       Visible Columns
                       {hiddenColumnCount > 0 && (
                         <span className="ml-2 text-sm text-muted-foreground">({hiddenColumnCount} hidden)</span>
                       )}
                     </h3>
-                    <button onClick={handleResetToDefaults} className="text-sm text-[#1976d2] hover:underline">
+                    <button onClick={handleResetToDefaults} className="text-sm text-prfc-blue hover:underline">
                       Reset to defaults
                     </button>
                   </div>
@@ -425,9 +407,7 @@ export function ReferralDataGrid({ initialIsMobile }: ReferralDataGridProps) {
                 </div>
 
                 <div className="space-y-3">
-                  <h3 className="font-medium" style={{ color: "#1976d2" }}>
-                    Filters
-                  </h3>
+                  <h3 className="font-medium text-prfc-blue">Filters</h3>
                   <div className="space-y-2">
                     <Select value={filterColumn} onValueChange={setFilterColumn}>
                       <SelectTrigger className="w-full min-h-[44px]">
@@ -441,7 +421,7 @@ export function ReferralDataGrid({ initialIsMobile }: ReferralDataGridProps) {
                         ))}
                       </SelectContent>
                     </Select>
-                    <Select value={filterOperator} onValueChange={setFilterOperator}>
+                    <Select value={filterOperator} onValueChange={(v) => setFilterOperator(v as FilterOperator)}>
                       <SelectTrigger className="w-full min-h-[44px]">
                         <SelectValue placeholder="Operator" />
                       </SelectTrigger>
@@ -460,7 +440,12 @@ export function ReferralDataGrid({ initialIsMobile }: ReferralDataGridProps) {
                       onChange={(e) => {
                         setFilterValue(e.target.value);
                         if (e.target.value.trim()) {
-                          setColumnFilters([{ id: filterColumn, value: e.target.value }]);
+                          setColumnFilters([
+                            {
+                              id: filterColumn,
+                              value: { text: e.target.value, operator: filterOperator } as ColumnFilterValue,
+                            },
+                          ]);
                         } else {
                           setColumnFilters([]);
                         }
@@ -476,9 +461,7 @@ export function ReferralDataGrid({ initialIsMobile }: ReferralDataGridProps) {
                 </div>
 
                 <div className="space-y-3">
-                  <h3 className="font-medium" style={{ color: "#1976d2" }}>
-                    Table Density
-                  </h3>
+                  <h3 className="font-medium text-prfc-blue">Table Density</h3>
                   <div className="flex flex-col gap-2">
                     {(["compact", "standard", "comfortable"] as Density[]).map((d) => (
                       <label
@@ -515,7 +498,7 @@ export function ReferralDataGrid({ initialIsMobile }: ReferralDataGridProps) {
         <div className="hidden md:flex items-center gap-4">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-1 text-sm hover:opacity-80" style={{ color: "#1976d2" }}>
+              <button className="flex items-center gap-1 text-sm text-prfc-blue hover:opacity-80">
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M4 4h4v4H4V4zm6 0h4v4h-4V4zm6 0h4v4h-4V4zM4 10h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4zM4 16h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4z" />
                 </svg>
@@ -566,8 +549,7 @@ export function ReferralDataGrid({ initialIsMobile }: ReferralDataGridProps) {
 
           <button
             onClick={() => setShowFilterPanel(!showFilterPanel)}
-            className="flex items-center gap-1 text-sm hover:opacity-80"
-            style={{ color: "#1976d2" }}
+            className="flex items-center gap-1 text-sm text-prfc-blue hover:opacity-80"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
               <path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z" />
@@ -577,7 +559,7 @@ export function ReferralDataGrid({ initialIsMobile }: ReferralDataGridProps) {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-1 text-sm hover:opacity-80" style={{ color: "#1976d2" }}>
+              <button className="flex items-center gap-1 text-sm text-prfc-blue hover:opacity-80">
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M4 8h16V6H4v2zm0 5h16v-2H4v2zm0 5h16v-2H4v2z" />
                 </svg>
@@ -670,7 +652,7 @@ export function ReferralDataGrid({ initialIsMobile }: ReferralDataGridProps) {
             </Select>
 
             <span className="text-sm text-gray-600">Operator</span>
-            <Select value={filterOperator} onValueChange={setFilterOperator}>
+            <Select value={filterOperator} onValueChange={(v) => setFilterOperator(v as FilterOperator)}>
               <SelectTrigger className="w-36 h-8 text-sm">
                 <SelectValue />
               </SelectTrigger>
@@ -683,9 +665,7 @@ export function ReferralDataGrid({ initialIsMobile }: ReferralDataGridProps) {
               </SelectContent>
             </Select>
 
-            <span className="text-sm" style={{ color: "#1976d2" }}>
-              Value
-            </span>
+            <span className="text-sm text-prfc-blue">Value</span>
             <Input
               type="text"
               placeholder="Filter value"
@@ -693,7 +673,12 @@ export function ReferralDataGrid({ initialIsMobile }: ReferralDataGridProps) {
               onChange={(e) => {
                 setFilterValue(e.target.value);
                 if (e.target.value.trim()) {
-                  setColumnFilters([{ id: filterColumn, value: e.target.value }]);
+                  setColumnFilters([
+                    {
+                      id: filterColumn,
+                      value: { text: e.target.value, operator: filterOperator } as ColumnFilterValue,
+                    },
+                  ]);
                 } else {
                   setColumnFilters([]);
                 }

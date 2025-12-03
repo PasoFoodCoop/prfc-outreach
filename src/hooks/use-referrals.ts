@@ -34,7 +34,7 @@ export function useReferrals(): UseReferralsReturn {
     try {
       const response = await fetch("/api/referral");
       if (!response.ok) {
-        throw new Error(`Failed to fetch: ${response.status}`);
+        throw new Error(`Failed to fetch referrals: ${response.status}`);
       }
       const json = await response.json();
       const validated = z.array(ApiReferralSchema).parse(json);
@@ -62,7 +62,7 @@ export function useReferrals(): UseReferralsReturn {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to update: ${response.status}`);
+        throw new Error(`Failed to update referral ${id}: ${response.status}`);
       }
     } catch (err) {
       setData((prev) => prev.map((ref) => (ref.id === id ? { ...ref, redeemed: currentValue } : ref)));
