@@ -4,7 +4,11 @@ import { faker } from "@faker-js/faker";
 import { parseArgs } from "node:util";
 
 function createAdapter() {
-  const url = new URL(process.env.DATABASE_URL!);
+  if (!process.env.DATABASE_URL) {
+    console.error("Missing DATABASE_URL");
+    process.exit(1);
+  }
+  const url = new URL(process.env.DATABASE_URL);
   return new PrismaMariaDb({
     host: url.hostname,
     port: url.port ? parseInt(url.port, 10) : 3306,
@@ -67,6 +71,15 @@ function assertSafeToSeed() {
 async function main() {
   const count = parseInt(values.count, 10);
   const fakerSeed = parseInt(values.seed, 10);
+
+  if (Number.isNaN(count) || count < 1) {
+    console.error("--count must be a positive integer");
+    process.exit(1);
+  }
+  if (Number.isNaN(fakerSeed)) {
+    console.error("--seed must be an integer");
+    process.exit(1);
+  }
 
   assertSafeToSeed();
 

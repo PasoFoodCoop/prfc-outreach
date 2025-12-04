@@ -8,7 +8,7 @@ export function middleware(request: NextRequest) {
     const password = searchParams.get("pass");
     const correctPassword = process.env.DATABASE_PASSWORD;
 
-    if (password !== correctPassword) {
+    if (!correctPassword || password !== correctPassword) {
       return new NextResponse(null, { status: 404 });
     }
   }
