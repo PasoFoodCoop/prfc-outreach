@@ -1,0 +1,111 @@
+import { PrismaMariaDb } from "@prisma/adapter-mariadb";
+import { PrismaClient, Prisma } from "../src/generated/prisma/client";
+import { faker } from "@faker-js/faker";
+import { parseArgs } from "node:util";
+
+function createAdapter() {
+  const url = new URL(process.env.DATABASE_URL!);
+  return new PrismaMariaDb({
+    host: url.hostname,
+    port: url.port ? parseInt(url.port, 10) : 3306,
+    user: url.username,
+    password: url.password,
+    database: url.pathname.slice(1),
+    connectionLimit: 1,
+  });
+}
+
+const adapter = createAdapter();
+const prisma = new PrismaClient({ adapter });
+
+const { values } = parseArgs({
+  options: {
+    count: { type: "string", short: "c", default: "100" },
+    reset: { type: "boolean", short: "r", default: true },
+    seed: { type: "string", short: "s", default: "42" },
+  } as const,
+});
+
+type ReferralInput = Prisma.ReferralCreateManyInput;
+
+const EMAIL_PROVIDERS = ["gmail.com", "yahoo.com", "outlook.com", "icloud.com", "hotmail.com"];
+
+function genReferral(): ReferralInput {
+  const mFirst = faker.person.firstName();
+  const mLast = faker.person.lastName();
+  const pFirst = faker.person.firstName();
+  const pLast = faker.person.lastName();
+
+  return {
+    memberName: `${mFirst} ${mLast}`,
+    memberEmail: faker.internet.email({
+      firstName: mFirst,
+      lastName: mLast,
+      provider: faker.helpers.arrayElement(EMAIL_PROVIDERS),
+    }),
+    prospectName: `${pFirst} ${pLast}`,
+    prospectEmail: faker.internet.email({ firstName: pFirst, lastName: pLast }),
+    referralCode: faker.string.alphanumeric({ length: 8, casing: "upper", exclude: ["O", "0", "I", "L", "1"] }),
+    redeemed: faker.datatype.boolean({ probability: 0.25 }),
+    createdAt: faker.date.between({ from: "2024-01-01", to: "2024-12-01" }),
+  };
+}
+
+function assertSafeToSeed() {
+  if (process.env.NODE_ENV === "production") {
+    console.error("Cannot seed production database");
+    process.exit(1);
+  }
+
+  const dbUrl = process.env.DATABASE_URL ?? "";
+  if (/prod|production|live/i.test(dbUrl)) {
+    console.error("DATABASE_URL appears to reference production");
+    process.exit(1);
+  }
+}
+
+async function main() {
+  const count = parseInt(values.count, 10);
+  const fakerSeed = parseInt(values.seed, 10);
+
+  assertSafeToSeed();
+
+  console.log(`Seeding ${count} referrals (seed: ${fakerSeed})`);
+
+  faker.seed(fakerSeed);
+  faker.setDefaultRefDate("2024-12-01T00:00:00.000Z");
+
+  const BATCH = 1000;
+  const batches: ReferralInput[][] = [];
+  for (let i = 0; i < count; i += BATCH) {
+    const size = Math.min(BATCH, count - i);
+    batches.push(Array.from({ length: size }, genReferral));
+  }
+
+  await prisma.$transaction(
+    async (tx) => {
+      if (values.reset) {
+        await tx.referral.deleteMany();
+        await tx.$executeRaw`ALTER TABLE referral AUTO_INCREMENT = 1`;
+        console.log("Cleared existing data");
+      }
+
+      let created = 0;
+      for (const batch of batches) {
+        const result = await tx.referral.createMany({ data: batch });
+        created += result.count;
+      }
+
+      const redeemed = await tx.referral.count({ where: { redeemed: true } });
+      console.log(`Created ${created} referrals (${redeemed} redeemed)`);
+    },
+    { timeout: 30000 },
+  );
+}
+
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(() => prisma.$disconnect());
