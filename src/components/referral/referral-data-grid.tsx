@@ -24,6 +24,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -43,6 +44,7 @@ import type { Referral } from "@/schema/referral";
 import { operatorFilter, filterOperators, type FilterOperator, type ColumnFilterValue } from "@/lib/table-filters";
 import { useToast } from "@/hooks/use-toast";
 import { useReferrals } from "@/hooks/use-referrals";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type Density = "compact" | "standard" | "comfortable";
 
@@ -72,28 +74,14 @@ const filterableColumns = [
   { id: "referralCode", label: "Code" },
 ];
 
-const MOBILE_HIDDEN_COLUMNS = ["createdAt", "memberEmail", "prospectEmail", "referralCode"];
 const STORAGE_KEY = "referral-table-columns";
 
-const getDefaultVisibility = (isMobile: boolean): VisibilityState => {
-  const visibility: VisibilityState = {};
-  MOBILE_HIDDEN_COLUMNS.forEach((col) => {
-    visibility[col] = !isMobile;
-  });
-  return visibility;
-};
-
-interface ReferralDataGridProps {
-  initialIsMobile: boolean;
-}
-
-export function ReferralDataGrid({ initialIsMobile }: ReferralDataGridProps) {
-  const { data: referrals, error, toggleRedeemed } = useReferrals();
+export function ReferralDataGrid() {
+  const { data: referrals, error, isLoading, isFetching, toggleRedeemed } = useReferrals();
   const [sorting, setSorting] = useState<SortingState>([{ id: "createdAt", desc: true }]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() =>
-    getDefaultVisibility(initialIsMobile),
-  );
+  // null = CSS handles responsive visibility, object = user overrides
+  const [userOverrides, setUserOverrides] = useState<VisibilityState | null>(null);
   const [rowSelection, setRowSelection] = useState({});
   const [globalFilter, setGlobalFilter] = useState("");
   const [density, setDensity] = useState<Density>("standard");
@@ -110,33 +98,38 @@ export function ReferralDataGrid({ initialIsMobile }: ReferralDataGridProps) {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
-        setColumnVisibility(JSON.parse(stored));
-        return;
+        setUserOverrides(JSON.parse(stored));
       }
-    } catch (error) {
-      console.warn("Failed to load column preferences:", error);
+    } catch {
+      // localStorage unavailable or corrupted
     }
+  }, []);
 
-    const actualIsMobile = window.innerWidth < 768;
-    if (actualIsMobile !== initialIsMobile) {
-      setColumnVisibility(getDefaultVisibility(actualIsMobile));
-    }
-  }, [initialIsMobile]);
+  const hasCustomized = userOverrides !== null;
 
   const handleColumnVisibilityChange = useCallback(
     (updater: VisibilityState | ((prev: VisibilityState) => VisibilityState)) => {
-      setColumnVisibility((prev) => {
-        const newState = typeof updater === "function" ? updater(prev) : updater;
+      setUserOverrides((prev) => {
+        const next = typeof updater === "function" ? updater(prev ?? {}) : updater;
         try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
-        } catch (error) {
-          console.warn("Failed to save column preferences:", error);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+        } catch {
+          // localStorage full or unavailable
         }
-        return newState;
+        return next;
       });
     },
     [],
   );
+
+  const resetColumnVisibility = useCallback(() => {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // localStorage unavailable
+    }
+    setUserOverrides(null);
+  }, []);
 
   useEffect(() => {
     if (error) {
@@ -181,6 +174,7 @@ export function ReferralDataGrid({ initialIsMobile }: ReferralDataGridProps) {
         header: "Date",
         cell: ({ row }) => formatDate(row.getValue("createdAt")),
         filterFn: operatorFilter,
+        meta: { className: "hidden md:table-cell", responsiveHidden: "md" },
       },
       {
         accessorKey: "memberName",
@@ -192,6 +186,7 @@ export function ReferralDataGrid({ initialIsMobile }: ReferralDataGridProps) {
         accessorKey: "memberEmail",
         header: "Member Email",
         filterFn: operatorFilter,
+        meta: { className: "hidden lg:table-cell", responsiveHidden: "lg" },
       },
       {
         accessorKey: "prospectName",
@@ -203,11 +198,13 @@ export function ReferralDataGrid({ initialIsMobile }: ReferralDataGridProps) {
         accessorKey: "prospectEmail",
         header: "Prospect Email",
         filterFn: operatorFilter,
+        meta: { className: "hidden lg:table-cell", responsiveHidden: "lg" },
       },
       {
         accessorKey: "referralCode",
         header: "Code",
         filterFn: operatorFilter,
+        meta: { className: "hidden md:table-cell", responsiveHidden: "md" },
       },
       {
         accessorKey: "redeemed",
@@ -227,9 +224,18 @@ export function ReferralDataGrid({ initialIsMobile }: ReferralDataGridProps) {
     [formatDate, toggleRedeemed],
   );
 
+  const placeholderRows = useMemo(() => Array(10).fill({} as Referral), []);
+  const skeletonColumns: ColumnDef<Referral>[] = useMemo(
+    () => columns.map((col) => ({ ...col, cell: () => <Skeleton className="h-4 w-full" /> })),
+    [columns],
+  );
+
+  const tableRows = isLoading ? placeholderRows : referrals;
+  const tableCols = isLoading ? skeletonColumns : columns;
+
   const table = useReactTable({
-    data: referrals,
-    columns,
+    data: tableRows,
+    columns: tableCols,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -243,7 +249,7 @@ export function ReferralDataGrid({ initialIsMobile }: ReferralDataGridProps) {
     state: {
       sorting,
       columnFilters,
-      columnVisibility,
+      columnVisibility: userOverrides ?? {},
       rowSelection,
       globalFilter,
     },
@@ -270,16 +276,6 @@ export function ReferralDataGrid({ initialIsMobile }: ReferralDataGridProps) {
     handleShowHideAll(true);
     setColumnSearch("");
   }, [handleShowHideAll]);
-
-  const handleResetToDefaults = useCallback(() => {
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-    } catch (error) {
-      console.warn("Failed to clear column preferences:", error);
-    }
-    const isMobile = window.innerWidth < 768;
-    setColumnVisibility(getDefaultVisibility(isMobile));
-  }, []);
 
   const allColumnsVisible = table
     .getAllColumns()
@@ -386,7 +382,7 @@ export function ReferralDataGrid({ initialIsMobile }: ReferralDataGridProps) {
                         <span className="ml-2 text-sm text-muted-foreground">({hiddenColumnCount} hidden)</span>
                       )}
                     </h3>
-                    <button onClick={handleResetToDefaults} className="text-sm text-prfc-blue hover:underline">
+                    <button onClick={resetColumnVisibility} className="text-sm text-prfc-blue hover:underline">
                       Reset to defaults
                     </button>
                   </div>
@@ -544,6 +540,12 @@ export function ReferralDataGrid({ initialIsMobile }: ReferralDataGridProps) {
                   Reset
                 </button>
               </div>
+              {hasCustomized && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={resetColumnVisibility}>Reset to defaults</DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -622,8 +624,12 @@ export function ReferralDataGrid({ initialIsMobile }: ReferralDataGridProps) {
       <div
         role="region"
         aria-label="Referral data table"
+        aria-busy={isFetching ? "true" : "false"}
         tabIndex={0}
-        className="overflow-x-auto focus:outline-2 focus:outline-blue-500"
+        className={cn(
+          "overflow-x-auto focus:outline-2 focus:outline-blue-500 transition-opacity",
+          isFetching && !isLoading && "opacity-60",
+        )}
         style={{
           border: "2px solid #968676",
           borderRadius: "12px",
@@ -703,7 +709,7 @@ export function ReferralDataGrid({ initialIsMobile }: ReferralDataGridProps) {
                     className={cn(
                       "font-bold",
                       header.column.getCanSort() && "cursor-pointer underline select-none",
-                      header.column.columnDef.meta?.className,
+                      !hasCustomized && header.column.columnDef.meta?.className,
                     )}
                     style={{ color: "#831002" }}
                     onClick={header.column.getToggleSortingHandler()}
@@ -731,7 +737,10 @@ export function ReferralDataGrid({ initialIsMobile }: ReferralDataGridProps) {
                   }}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className={cell.column.columnDef.meta?.className}>
+                    <TableCell
+                      key={cell.id}
+                      className={!hasCustomized ? cell.column.columnDef.meta?.className : undefined}
+                    >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
@@ -739,8 +748,8 @@ export function ReferralDataGrid({ initialIsMobile }: ReferralDataGridProps) {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
-                  No rows
+                <TableCell colSpan={tableCols.length} className="h-24 text-center">
+                  {isLoading ? "" : "No referrals found"}
                 </TableCell>
               </TableRow>
             )}
