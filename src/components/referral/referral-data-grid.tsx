@@ -44,6 +44,7 @@ import type { Referral } from "@/schema/referral";
 import { operatorFilter, filterOperators, type FilterOperator, type ColumnFilterValue } from "@/lib/table-filters";
 import { useToast } from "@/hooks/use-toast";
 import { useReferrals } from "@/hooks/use-referrals";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type Density = "compact" | "standard" | "comfortable";
 
@@ -76,7 +77,7 @@ const filterableColumns = [
 const STORAGE_KEY = "referral-table-columns";
 
 export function ReferralDataGrid() {
-  const { data: referrals, error, toggleRedeemed } = useReferrals();
+  const { data: referrals, error, isLoading, isFetching, toggleRedeemed } = useReferrals();
   const [sorting, setSorting] = useState<SortingState>([{ id: "createdAt", desc: true }]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   // null = CSS handles responsive visibility, object = user overrides
@@ -223,9 +224,18 @@ export function ReferralDataGrid() {
     [formatDate, toggleRedeemed],
   );
 
+  const placeholderRows = useMemo(() => Array(10).fill({} as Referral), []);
+  const skeletonColumns: ColumnDef<Referral>[] = useMemo(
+    () => columns.map((col) => ({ ...col, cell: () => <Skeleton className="h-4 w-full" /> })),
+    [columns],
+  );
+
+  const tableRows = isLoading ? placeholderRows : referrals;
+  const tableCols = isLoading ? skeletonColumns : columns;
+
   const table = useReactTable({
-    data: referrals,
-    columns,
+    data: tableRows,
+    columns: tableCols,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -614,8 +624,12 @@ export function ReferralDataGrid() {
       <div
         role="region"
         aria-label="Referral data table"
+        aria-busy={isFetching ? "true" : "false"}
         tabIndex={0}
-        className="overflow-x-auto focus:outline-2 focus:outline-blue-500"
+        className={cn(
+          "overflow-x-auto focus:outline-2 focus:outline-blue-500 transition-opacity",
+          isFetching && !isLoading && "opacity-60",
+        )}
         style={{
           border: "2px solid #968676",
           borderRadius: "12px",
@@ -734,8 +748,8 @@ export function ReferralDataGrid() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
-                  No rows
+                <TableCell colSpan={tableCols.length} className="h-24 text-center">
+                  {isLoading ? "" : "No referrals found"}
                 </TableCell>
               </TableRow>
             )}

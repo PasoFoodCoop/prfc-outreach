@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import type { Referral } from "@/schema/referral";
 import { z } from "zod";
 
@@ -18,7 +18,8 @@ const ApiReferralSchema = z.object({
 interface UseReferralsReturn {
   data: Referral[];
   error: Error | null;
-  loading: boolean;
+  isLoading: boolean;
+  isFetching: boolean;
   refetch: () => Promise<void>;
   toggleRedeemed: (id: number, currentValue: boolean) => Promise<void>;
 }
@@ -26,10 +27,13 @@ interface UseReferralsReturn {
 export function useReferrals(): UseReferralsReturn {
   const [data, setData] = useState<Referral[]>([]);
   const [error, setError] = useState<Error | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isFetching, setIsFetching] = useState(true);
+  const hasFetched = useRef(false);
+
+  const isLoading = isFetching && !hasFetched.current;
 
   const fetchReferrals = useCallback(async () => {
-    setLoading(true);
+    setIsFetching(true);
     setError(null);
     try {
       const response = await fetch("/api/referral");
@@ -39,12 +43,13 @@ export function useReferrals(): UseReferralsReturn {
       const json = await response.json();
       const validated = z.array(ApiReferralSchema).parse(json);
       setData(validated);
+      hasFetched.current = true;
     } catch (err) {
       const error = err instanceof Error ? err : new Error("Unknown error");
       setError(error);
       console.error("[useReferrals] Fetch error:", error);
     } finally {
-      setLoading(false);
+      setIsFetching(false);
     }
   }, []);
 
@@ -73,7 +78,8 @@ export function useReferrals(): UseReferralsReturn {
   return {
     data,
     error,
-    loading,
+    isLoading,
+    isFetching,
     refetch: fetchReferrals,
     toggleRedeemed,
   };

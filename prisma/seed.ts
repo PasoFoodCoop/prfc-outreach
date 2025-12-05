@@ -51,7 +51,7 @@ function genReferral(): ReferralInput {
     prospectEmail: faker.internet.email({ firstName: pFirst, lastName: pLast }),
     referralCode: faker.string.alphanumeric({ length: 8, casing: "upper", exclude: ["O", "0", "I", "L", "1"] }),
     redeemed: faker.datatype.boolean({ probability: 0.25 }),
-    createdAt: faker.date.between({ from: "2024-01-01", to: "2024-12-01" }),
+    createdAt: faker.date.between({ from: "2025-01-01", to: "2025-12-01" }),
   };
 }
 
@@ -86,7 +86,7 @@ async function main() {
   console.log(`Seeding ${count} referrals (seed: ${fakerSeed})`);
 
   faker.seed(fakerSeed);
-  faker.setDefaultRefDate("2024-12-01T00:00:00.000Z");
+  faker.setDefaultRefDate("2025-12-01T00:00:00.000Z");
 
   const BATCH = 1000;
   const batches: ReferralInput[][] = [];
