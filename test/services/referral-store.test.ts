@@ -2,7 +2,7 @@
  * @jest-environment node
  */
 import { prismaMock } from "../mocks/prisma";
-import { referralCharlie, createReferralInput, allReferrals } from "../mocks/referrals";
+import { referralCharlie, referralLinusRedeemed, createReferralInput, allReferrals } from "../mocks/referrals";
 import { getAllReferrals, getReferralById, createReferral, toggleReferralRedeemed } from "@/services/referral-store";
 
 describe("getAllReferrals", () => {
@@ -69,6 +69,22 @@ describe("toggleReferralRedeemed", () => {
     expect(prismaMock.referral.update).toHaveBeenCalledWith({
       where: { id: 1 },
       data: { redeemed: true },
+    });
+  });
+
+  it("flips redeemed true->false", async () => {
+    prismaMock.referral.findUnique.mockResolvedValue(referralLinusRedeemed);
+    prismaMock.referral.update.mockResolvedValue({
+      ...referralLinusRedeemed,
+      redeemed: false,
+    });
+
+    const result = await toggleReferralRedeemed(2);
+
+    expect(result.redeemed).toBe(false);
+    expect(prismaMock.referral.update).toHaveBeenCalledWith({
+      where: { id: 2 },
+      data: { redeemed: false },
     });
   });
 

@@ -8,6 +8,7 @@ test.describe("Referral Database Page", () => {
   });
 
   test("shows data grid with valid password", async ({ page }) => {
+    test.skip(!process.env.DATABASE_PASSWORD, "DATABASE_PASSWORD env var required");
     await page.goto(`/referral-database?pass=${process.env.DATABASE_PASSWORD}`);
 
     await expect(page.getByRole("table")).toBeVisible();
@@ -15,6 +16,7 @@ test.describe("Referral Database Page", () => {
   });
 
   test("search filters table rows", async ({ page }) => {
+    test.skip(!process.env.DATABASE_PASSWORD, "DATABASE_PASSWORD env var required");
     await page.goto(`/referral-database?pass=${process.env.DATABASE_PASSWORD}`);
 
     const searchInput = page.getByPlaceholder(/search/i);
@@ -24,6 +26,7 @@ test.describe("Referral Database Page", () => {
   });
 
   test("toggle switch updates redeemed status", async ({ page }) => {
+    test.skip(!process.env.DATABASE_PASSWORD, "DATABASE_PASSWORD env var required");
     await page.goto(`/referral-database?pass=${process.env.DATABASE_PASSWORD}`);
 
     const firstSwitch = page.getByRole("switch").first();
