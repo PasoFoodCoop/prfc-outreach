@@ -1,4 +1,4 @@
-import prisma from "@/database/db";
+import prisma from "@/lib/db";
 import { CreateReferralSchema, type CreateReferral } from "@/schema/referral";
 import { AppError, transformError } from "@/utils/errors";
 
