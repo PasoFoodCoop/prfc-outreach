@@ -31,6 +31,10 @@ export default [
       ...pluginNext.configs["core-web-vitals"].rules,
       ...pluginReact.configs["jsx-runtime"].rules,
       ...pluginReactHooks.configs.recommended.rules,
+      // TanStack Table v8 uses interior mutability incompatible with React Compiler.
+      // Disable until TanStack Table v9 releases with React Compiler support.
+      // See: https://github.com/TanStack/table/issues/5567
+      "react-hooks/incompatible-library": "off",
       "react/react-in-jsx-scope": "off",
       "react/prop-types": "off",
       "@typescript-eslint/no-unused-vars": [

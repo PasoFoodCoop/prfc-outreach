@@ -3,7 +3,7 @@
  */
 import { prismaMock } from "../mocks/prisma";
 import { referralCharlie, referralLinusRedeemed, createReferralInput, allReferrals } from "../mocks/referrals";
-import { getAllReferrals, getReferralById, createReferral, toggleReferralRedeemed } from "@/services/referral-store";
+import { getAllReferrals, getReferralById, createReferral, toggleReferralRedeemed } from "@/services/referral";
 
 describe("getAllReferrals", () => {
   it("returns referrals ordered by createdAt desc", async () => {

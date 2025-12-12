@@ -1,14 +1,9 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { Prisma } from "@/generated/prisma/client";
+import type { ErrorCode } from "@/schema/error";
 
-export type ErrorCode =
-  | "VALIDATION_ERROR"
-  | "NOT_FOUND"
-  | "DATABASE_ERROR"
-  | "EMAIL_ERROR"
-  | "UNAUTHORIZED"
-  | "INTERNAL_ERROR";
+export type { ErrorCode } from "@/schema/error";
 
 export class AppError extends Error {
   constructor(

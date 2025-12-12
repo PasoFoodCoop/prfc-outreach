@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ChecksumSchema } from "@/schema/referral";
+import { ChecksumSchema } from "@/schema/api";
 import { calculateChecksum } from "@/utils/checksum";
 import { AppError, apiErrorHandler } from "@/utils/errors";
 

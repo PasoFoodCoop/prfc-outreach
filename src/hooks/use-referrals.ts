@@ -1,22 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import type { Referral } from "@/schema/referral";
 import { z } from "zod";
-
-const ApiReferralSchema = z.object({
-  id: z.number(),
-  createdAt: z.coerce.date(),
-  memberName: z.string(),
-  memberEmail: z.string(),
-  prospectName: z.string(),
-  prospectEmail: z.string(),
-  referralCode: z.string(),
-  redeemed: z.boolean(),
-});
+import { ApiReferralSchema, type ApiReferral } from "@/schema/api";
+import { toggleRedeemed as toggleRedeemedAction } from "@/actions/referral";
 
 interface UseReferralsReturn {
-  data: Referral[];
+  data: ApiReferral[];
   error: Error | null;
   isLoading: boolean;
   isFetching: boolean;
@@ -25,7 +15,7 @@ interface UseReferralsReturn {
 }
 
 export function useReferrals(): UseReferralsReturn {
-  const [data, setData] = useState<Referral[]>([]);
+  const [data, setData] = useState<ApiReferral[]>([]);
   const [error, setError] = useState<Error | null>(null);
   const [isFetching, setIsFetching] = useState(true);
   const hasFetched = useRef(false);
@@ -58,20 +48,15 @@ export function useReferrals(): UseReferralsReturn {
   }, [fetchReferrals]);
 
   const toggleRedeemed = useCallback(async (id: number, currentValue: boolean) => {
+    // Optimistic update
     setData((prev) => prev.map((ref) => (ref.id === id ? { ...ref, redeemed: !currentValue } : ref)));
 
-    try {
-      const response = await fetch(`/api/referral/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-      });
+    const result = await toggleRedeemedAction(id);
 
-      if (!response.ok) {
-        throw new Error(`Failed to update referral ${id}: ${response.status}`);
-      }
-    } catch (err) {
+    if (!result.success) {
+      // Revert on failure
       setData((prev) => prev.map((ref) => (ref.id === id ? { ...ref, redeemed: currentValue } : ref)));
-      console.error("[useReferrals] Toggle error:", err);
+      console.error("[useReferrals] Toggle error:", result.error);
     }
   }, []);
 
