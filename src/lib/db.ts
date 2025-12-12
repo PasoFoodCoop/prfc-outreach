@@ -21,7 +21,7 @@ function createAdapter() {
     database: url.pathname.slice(1),
     connectionLimit: 5,
     keepAliveDelay: 30000,
-    socketTimeout: 30000,
+    socketTimeout: 60000,
   });
 }
 

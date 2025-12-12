@@ -5,6 +5,7 @@ import { ReferralFormSchema } from "@/schema/api";
 import { createManyReferrals, toggleReferralRedeemed } from "@/services/referral";
 import { sendReferralEmails } from "@/services/email";
 import { transformError } from "@/utils/errors";
+import { verifyDatabaseAccess } from "@/lib/auth";
 
 export interface ActionResult {
   success: boolean;
@@ -13,11 +14,18 @@ export interface ActionResult {
 
 export async function submitReferrals(formData: FormData): Promise<ActionResult> {
   try {
+    let prospectsRaw: unknown;
+    try {
+      prospectsRaw = JSON.parse(formData.get("prospects") as string);
+    } catch {
+      return { success: false, error: "Invalid prospects data format" };
+    }
+
     const rawData = {
       memberName: formData.get("memberName"),
       memberEmail: formData.get("memberEmail"),
       referralCode: formData.get("referralCode"),
-      prospects: JSON.parse(formData.get("prospects") as string),
+      prospects: prospectsRaw,
     };
 
     const { memberName, memberEmail, referralCode, prospects } = ReferralFormSchema.parse(rawData);
@@ -45,6 +53,7 @@ export async function submitReferrals(formData: FormData): Promise<ActionResult>
 
 export async function toggleRedeemed(id: number): Promise<ActionResult> {
   try {
+    await verifyDatabaseAccess();
     await toggleReferralRedeemed(id);
     revalidatePath("/referral-database");
     return { success: true };
