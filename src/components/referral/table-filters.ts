@@ -1,3 +1,6 @@
+import type { Row, FilterFn } from "@tanstack/react-table";
+import type { ApiReferral } from "@/schema/api";
+
 export type FilterOperator =
   | "contains"
   | "doesNotContain"
@@ -24,15 +27,17 @@ const ops: Record<FilterOperator, (cellVal: string, filterVal: string) => boolea
   isNotEmpty: (c) => c !== "",
 };
 
-export function operatorFilter(
-  row: { getValue: (columnId: string) => unknown },
+export const operatorFilter: FilterFn<ApiReferral> = (
+  row: Row<ApiReferral>,
   columnId: string,
   filterValue: ColumnFilterValue,
-): boolean {
+): boolean => {
   const cell = String(row.getValue(columnId) ?? "").toLowerCase();
   const text = filterValue.text.toLowerCase();
   return ops[filterValue.operator](cell, text);
-}
+};
+
+operatorFilter.autoRemove = (value: ColumnFilterValue) => !value?.text || value.text.trim() === "";
 
 export const filterOperators: { value: FilterOperator; label: string }[] = [
   { value: "contains", label: "contains" },

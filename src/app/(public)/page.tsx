@@ -1,13 +1,10 @@
 import { Suspense } from "react";
 import Image from "next/image";
-import { Header } from "@/components/layout/header";
 import { ReferralForm } from "@/components/referral/referral-form";
 
 export default function Home() {
   return (
     <main className="flex-1 flex flex-col justify-between items-center text-prfc-dark-brown overflow-x-hidden w-auto mx-auto min-h-screen">
-      <Header />
-
       <section className="flex flex-wrap w-full bg-prfc-tan px-8 md:pr-0 m-0 gap-0">
         <div className="py-8 px-4 flex-[1_1_400px] min-w-[300px] flex flex-col justify-center min-h-full">
           <div className="mb-8">

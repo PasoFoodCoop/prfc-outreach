@@ -1,4 +1,5 @@
-import { ReferralSchema, CreateReferralSchema, ReferralFormSchema } from "@/schema/referral";
+import { ReferralSchema, CreateReferralSchema } from "@/schema/referral";
+import { ReferralFormSchema } from "@/schema/api";
 import { referralCharlie, createReferralInput, formWithTwoProspects } from "../mocks/referrals";
 
 describe("ReferralSchema", () => {

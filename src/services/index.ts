@@ -1,2 +1,2 @@
-export * from "./referral-store";
-export * from "./email-service";
+export * from "./referral";
+export * from "./email";

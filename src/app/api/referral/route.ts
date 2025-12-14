@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ReferralFormSchema } from "@/schema/referral";
-import { createManyReferrals, getAllReferrals } from "@/services/referral-store";
-import { sendReferralEmails } from "@/services/email-service";
+import { ReferralFormSchema } from "@/schema/api";
+import { createManyReferrals, getAllReferrals } from "@/services/referral";
+import { sendReferralEmails } from "@/services/email";
 import { apiErrorHandler } from "@/utils/errors";
+
+const ACCESS_COOKIE = "prfc_database_access";
 
 export async function POST(req: NextRequest) {
   try {
@@ -28,7 +30,13 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const hasAccess = req.cookies.get(ACCESS_COOKIE);
+
+  if (hasAccess?.value !== "verified") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const referrals = await getAllReferrals();
     return NextResponse.json(referrals, { status: 200 });

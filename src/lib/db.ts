@@ -20,6 +20,8 @@ function createAdapter() {
     password: url.password,
     database: url.pathname.slice(1),
     connectionLimit: 5,
+    keepAliveDelay: 30000,
+    socketTimeout: 60000,
   });
 }
 
