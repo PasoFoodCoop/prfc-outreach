@@ -25,6 +25,7 @@ import type { ApiReferral } from "@/schema/api";
 import { operatorFilter, type FilterOperator, type ColumnFilterValue } from "./table-filters";
 import { useToast } from "@/hooks/use-toast";
 import { useReferrals } from "@/hooks/use-referrals";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataTableToolbar } from "./data-table-toolbar";
@@ -37,6 +38,7 @@ const STORAGE_KEY = "referral-table-columns";
 
 export function ReferralDataGrid() {
   const { data: referrals, error, isLoading, isFetching, toggleRedeemed } = useReferrals();
+  const isMobile = useIsMobile();
   const [sorting, setSorting] = useState<SortingState>([{ id: "createdAt", desc: true }]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   // null = CSS handles responsive visibility, object = user overrides
@@ -95,6 +97,12 @@ export function ReferralDataGrid() {
       toast({ title: "Failed to load referrals", variant: "destructive" });
     }
   }, [error, toast]);
+
+  useEffect(() => {
+    if (isMobile && showFilterPanel) {
+      setShowFilterPanel(false);
+    }
+  }, [isMobile, showFilterPanel]);
 
   const formatDate = useCallback((date: string | Date) => {
     return new Intl.DateTimeFormat("en-US", {
@@ -185,7 +193,7 @@ export function ReferralDataGrid() {
 
   const placeholderRows = useMemo(() => Array(10).fill({} as ApiReferral), []);
   const skeletonColumns: ColumnDef<ApiReferral>[] = useMemo(
-    () => columns.map((col) => ({ ...col, cell: () => <Skeleton className="h-4 w-full" /> })),
+    () => columns.map((column) => ({ ...column, cell: () => <Skeleton className="h-4 w-full" /> })),
     [columns],
   );
 
@@ -220,7 +228,9 @@ export function ReferralDataGrid() {
     setShowFilterPanel(false);
   }, []);
 
-  const hiddenColumnCount = table.getAllColumns().filter((c) => c.getCanHide() && !c.getIsVisible()).length;
+  const hiddenColumnCount = table
+    .getAllColumns()
+    .filter((column) => column.getCanHide() && !column.getIsVisible()).length;
   const isFiltered = columnFilters.length > 0;
 
   const exportToPDF = useCallback(() => {
@@ -301,7 +311,7 @@ export function ReferralDataGrid() {
               type="text"
               placeholder="Search…"
               value={globalFilter}
-              onChange={(e) => setGlobalFilter(e.target.value)}
+              onChange={(event) => setGlobalFilter(event.target.value)}
               className="border-none shadow-none focus-visible:ring-0 w-40 p-0 h-auto text-sm"
               aria-label="Search referrals"
             />
