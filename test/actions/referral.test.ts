@@ -1,22 +1,21 @@
-/**
- * @jest-environment node
- */
+import { vi, type MockedFunction } from "vitest";
 import { prismaMock } from "../mocks/prisma";
 import "../mocks/email";
 import { referralCharlie, formWithTwoProspects } from "../mocks/referrals";
+import { AppError } from "@/utils/errors";
 
-jest.mock("next/cache", () => ({
-  revalidatePath: jest.fn(),
+vi.mock("next/cache", () => ({
+  revalidatePath: vi.fn(),
 }));
 
-jest.mock("@/lib/auth", () => ({
-  verifyDatabaseAccess: jest.fn(),
+vi.mock("@/lib/dal", () => ({
+  requireAdmin: vi.fn(),
 }));
 
 import { submitReferrals, toggleRedeemed } from "@/actions/referral";
-import { verifyDatabaseAccess } from "@/lib/auth";
+import { requireAdmin } from "@/lib/dal";
 
-const mockVerifyDatabaseAccess = verifyDatabaseAccess as jest.MockedFunction<typeof verifyDatabaseAccess>;
+const mockRequireAdmin = requireAdmin as MockedFunction<typeof requireAdmin>;
 
 function createFormData(data: Record<string, string>): FormData {
   const formData = new FormData();
@@ -83,11 +82,11 @@ describe("submitReferrals", () => {
 
 describe("toggleRedeemed", () => {
   beforeEach(() => {
-    mockVerifyDatabaseAccess.mockReset();
+    mockRequireAdmin.mockReset();
   });
 
   it("toggles redeemed status when authenticated", async () => {
-    mockVerifyDatabaseAccess.mockResolvedValue({ authenticated: true });
+    mockRequireAdmin.mockResolvedValue({ ownerid: 100184, isAdmin: true });
     prismaMock.referral.findUnique.mockResolvedValue(referralCharlie);
     prismaMock.referral.update.mockResolvedValue({ ...referralCharlie, redeemed: true });
 
@@ -101,16 +100,16 @@ describe("toggleRedeemed", () => {
   });
 
   it("returns error when not authenticated", async () => {
-    mockVerifyDatabaseAccess.mockRejectedValue(new Error("Database access required"));
+    mockRequireAdmin.mockRejectedValue(new AppError("FORBIDDEN", "Admin access required"));
 
     const result = await toggleRedeemed(1);
 
     expect(result.success).toBe(false);
-    expect(result.error).toContain("Database access required");
+    expect(result.error).toContain("Admin access required");
   });
 
   it("returns error for non-existent referral", async () => {
-    mockVerifyDatabaseAccess.mockResolvedValue({ authenticated: true });
+    mockRequireAdmin.mockResolvedValue({ ownerid: 100184, isAdmin: true });
     prismaMock.referral.findUnique.mockResolvedValue(null);
 
     const result = await toggleRedeemed(999);
