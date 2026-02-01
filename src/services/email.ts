@@ -26,6 +26,7 @@ const transport = nodemailer.createTransport({
 });
 
 process.on("SIGTERM", () => {
+  console.log("Closing email transport...");
   transport.close();
 });
 
@@ -140,13 +141,6 @@ export async function filterSuppressedEmails(emails: string[]): Promise<{ valid:
 
 const BATCH_SIZE = 10;
 const BATCH_DELAY_MS = 1000;
-const CAN_SPAM_FOOTER = `
-<hr>
-<p style="font-size: 12px; color: #666;">
-  <strong>Paso Robles Food Cooperative, Inc.</strong><br>
-  P.O. Box 922, Paso Robles, CA 93447
-</p>
-`;
 
 interface GroupEmailParams {
   recipients: Array<{ email: string; memberId: number; name: string }>;
@@ -176,7 +170,16 @@ export async function sendGroupEmails(
       batch.map(async (recipient) => {
         const token = generateUnsubscribeToken(recipient.memberId, groupId);
         const unsubscribeUrl = `${env.APP_URL}/api/unsubscribe?token=${token}`;
-        const htmlWithFooter = body + CAN_SPAM_FOOTER;
+        const htmlWithFooter =
+          body +
+          `
+<hr>
+<p style="font-size: 12px; color: #666;">
+  <strong>Paso Robles Food Cooperative, Inc.</strong><br>
+  P.O. Box 922, Paso Robles, CA 93447<br>
+  <a href="${unsubscribeUrl}" style="color: #831002;">Unsubscribe from this group</a>
+</p>
+`;
 
         await transport.sendMail({
           from: `${senderName} <${env.FROM_EMAIL}>`,

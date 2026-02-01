@@ -44,11 +44,19 @@ export function verifyUnsubscribeToken(token: string): TokenVerificationResult {
       .update(`${memberIdStr}|${groupIdStr}|${timestampStr}`)
       .digest("base64url");
 
-    if (!crypto.timingSafeEqual(Buffer.from(signature, "utf-8"), Buffer.from(expectedSignature, "utf-8"))) {
+    if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))) {
       return { valid: false, error: "Invalid signature" };
     }
 
-    const tokenAge = Date.now() - parseInt(timestampStr);
+    const memberId = parseInt(memberIdStr, 10);
+    const groupId = parseInt(groupIdStr, 10);
+    const timestamp = parseInt(timestampStr, 10);
+
+    if (Number.isNaN(memberId) || Number.isNaN(groupId) || Number.isNaN(timestamp)) {
+      return { valid: false, error: "Invalid token format" };
+    }
+
+    const tokenAge = Date.now() - timestamp;
 
     if (tokenAge > TEN_YEARS_MS) {
       return { valid: false, error: "Token expired" };
@@ -56,9 +64,9 @@ export function verifyUnsubscribeToken(token: string): TokenVerificationResult {
 
     return {
       valid: true,
-      memberId: parseInt(memberIdStr),
-      groupId: parseInt(groupIdStr),
-      timestamp: parseInt(timestampStr),
+      memberId,
+      groupId,
+      timestamp,
     };
   } catch {
     return { valid: false, error: "Token parsing failed" };

@@ -32,46 +32,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    const userAgent = request.headers.get("user-agent") || "";
-    const isEmailClient =
-      userAgent.includes("curl") || userAgent.includes("PostmanRuntime") || userAgent.includes("Mozilla") === false;
-
-    if (isEmailClient) {
-      return new NextResponse(null, { status: 204 });
-    }
-
-    return new NextResponse(
-      `<!DOCTYPE html>
-      <html lang="en">
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Unsubscribed</title>
-          <style>
-            body {
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-              max-width: 600px;
-              margin: 100px auto;
-              padding: 20px;
-              text-align: center;
-            }
-            h1 { color: #831002; }
-            p { color: #666; line-height: 1.6; }
-            a { color: #831002; text-decoration: none; }
-            a:hover { text-decoration: underline; }
-          </style>
-        </head>
-        <body>
-          <h1>You've been unsubscribed</h1>
-          <p>You will no longer receive emails from this group.</p>
-          <p>If this was a mistake, please contact the group administrator to re-subscribe.</p>
-        </body>
-      </html>`,
-      {
-        status: 200,
-        headers: { "Content-Type": "text/html" },
-      },
-    );
+    return new NextResponse(null, { status: 204 });
   } catch (error) {
     const appError = transformError(error);
     const status = errorStatusMap[appError.code] || 500;
