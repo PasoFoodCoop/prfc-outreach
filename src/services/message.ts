@@ -4,6 +4,7 @@ import { env } from "@/env";
 import { AppError, transformError } from "@/utils/errors";
 import { getGroupRecipients } from "@/services/contact-group";
 import { sendGroupEmails } from "@/services/email";
+import { getMemberDetails, getAllActiveMemberIds } from "@/lib/api/member-api";
 import type { ComposeMessage, BlastMessage } from "@/schema/contact-group";
 import type { MockMember } from "@/lib/mock-members";
 
@@ -36,16 +37,6 @@ export function validateSmsAllowed(): void {
       reason: "QUIET_HOURS",
     });
   }
-}
-
-// TODO: Replace with Member Portal API integration
-export async function getMemberDetails(memberIds: number[]): Promise<MockMember[]> {
-  return memberIds.map((id) => ({
-    ownerid: id,
-    ownername: `Member ${id}`,
-    owneremail: `member${id}@example.com`,
-    ownerphone: `+1555000${String(id).padStart(4, "0")}`,
-  }));
 }
 
 async function sendEmailsForMessage(
@@ -206,13 +197,7 @@ export async function sendBlastMessage(input: BlastMessage, senderId: number): P
       validateSmsAllowed();
     }
 
-    // TODO: Replace with Member Portal API call to get all member IDs
-    const allMemberIds = await prisma.contactGroupMember.findMany({
-      select: { memberId: true },
-      distinct: ["memberId"],
-    });
-
-    const recipientIds = allMemberIds.map((m) => m.memberId);
+    const recipientIds = await getAllActiveMemberIds();
 
     if (recipientIds.length === 0) {
       throw new AppError("VALIDATION_ERROR", "No members found to send blast message");
