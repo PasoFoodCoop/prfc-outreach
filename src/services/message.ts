@@ -62,7 +62,6 @@ async function sendEmailsForMessage(
   groupId: number | null,
 ): Promise<{ sent: number; failed: number }> {
   try {
-    // BANDAID: groupId unused until PR #51 merges (unsubscribe tokens)
     const emailResult = await sendGroupEmails({
       recipients: recipients.map((r) => ({
         email: r.email,

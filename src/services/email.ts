@@ -6,6 +6,7 @@ import type { Prospect } from "@/schema/referral";
 import type { EmailSuppressionReason } from "@/generated/prisma/client";
 import { AppError, transformError } from "@/utils/errors";
 import { env } from "@/env";
+import { generateUnsubscribeToken } from "@/lib/unsubscribe-tokens";
 
 const transport = nodemailer.createTransport({
   host: env.SMTP_HOST,
@@ -25,6 +26,7 @@ const transport = nodemailer.createTransport({
 });
 
 process.on("SIGTERM", () => {
+  console.log("Closing email transport...");
   transport.close();
 });
 
@@ -139,13 +141,6 @@ export async function filterSuppressedEmails(emails: string[]): Promise<{ valid:
 
 const BATCH_SIZE = 10;
 const BATCH_DELAY_MS = 1000;
-const CAN_SPAM_FOOTER = `
-<hr>
-<p style="font-size: 12px; color: #666;">
-  <strong>Paso Robles Food Cooperative, Inc.</strong><br>
-  P.O. Box 922, Paso Robles, CA 93447
-</p>
-`;
 
 interface GroupEmailParams {
   recipients: Array<{ email: string; memberId: number; name: string }>;
@@ -159,8 +154,7 @@ interface GroupEmailParams {
 export async function sendGroupEmails(
   params: GroupEmailParams,
 ): Promise<{ sent: number; failed: number; suppressed: number }> {
-  // BANDAID: groupId unused until unsubscribe tokens added (from PR #51)
-  const { recipients, subject, body, senderName, replyTo, groupId: _groupId } = params;
+  const { recipients, subject, body, senderName, replyTo, groupId } = params;
 
   const emails = recipients.map((r) => r.email);
   const { valid, suppressed } = await filterSuppressedEmails(emails);
@@ -174,7 +168,18 @@ export async function sendGroupEmails(
 
     const results = await Promise.allSettled(
       batch.map(async (recipient) => {
-        const htmlWithFooter = body + CAN_SPAM_FOOTER;
+        const token = generateUnsubscribeToken(recipient.memberId, groupId);
+        const unsubscribeUrl = `${env.APP_URL}/api/unsubscribe?token=${token}`;
+        const htmlWithFooter =
+          body +
+          `
+<hr>
+<p style="font-size: 12px; color: #666;">
+  <strong>Paso Robles Food Cooperative, Inc.</strong><br>
+  P.O. Box 922, Paso Robles, CA 93447<br>
+  <a href="${unsubscribeUrl}" style="color: #831002;">Unsubscribe from this group</a>
+</p>
+`;
 
         await transport.sendMail({
           from: `${senderName} <${env.FROM_EMAIL}>`,
@@ -182,6 +187,13 @@ export async function sendGroupEmails(
           replyTo,
           subject,
           html: htmlWithFooter,
+          headers: {
+            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+            "List-Unsubscribe": {
+              prepared: true,
+              value: `<${unsubscribeUrl}>`,
+            },
+          },
         });
       }),
     );

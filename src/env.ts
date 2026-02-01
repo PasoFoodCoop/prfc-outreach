@@ -25,6 +25,12 @@ const envSchema = z.object({
     .default("false")
     .transform((v) => v === "true"),
 
+  // Unsubscribe token signing secret (256-bit minimum)
+  UNSUBSCRIBE_SECRET: z.string().min(32),
+
+  // Application base URL for generating unsubscribe links
+  APP_URL: z.url().default("http://localhost:3000"),
+
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
 });
 
