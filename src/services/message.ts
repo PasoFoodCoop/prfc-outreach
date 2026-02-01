@@ -76,27 +76,28 @@ async function sendEmailsForMessage(
       groupId: groupId ?? 0,
     });
 
-    await prisma.messageRecipient.updateMany({
-      where: {
-        messageId,
-        channel: "email",
-        memberId: { in: recipients.map((r) => r.id) },
-      },
-      data: {
-        status: "sent",
-        sentAt: new Date(),
-      },
-    });
-
-    if (emailResult.failed > 0) {
+    if (emailResult.failed === 0) {
       await prisma.messageRecipient.updateMany({
         where: {
           messageId,
           channel: "email",
-          status: "pending",
+          memberId: { in: recipients.map((r) => r.id) },
+        },
+        data: {
+          status: "sent",
+          sentAt: new Date(),
+        },
+      });
+    } else {
+      await prisma.messageRecipient.updateMany({
+        where: {
+          messageId,
+          channel: "email",
+          memberId: { in: recipients.map((r) => r.id) },
         },
         data: {
           status: "failed",
+          sentAt: new Date(),
         },
       });
     }
@@ -106,19 +107,6 @@ async function sendEmailsForMessage(
     console.error("[sendEmailsForMessage] Failed:", error);
     return { sent: 0, failed: recipients.length };
   }
-}
-
-async function handleSmsDisabled(messageId: number): Promise<void> {
-  await prisma.messageRecipient.updateMany({
-    where: {
-      messageId,
-      channel: "sms",
-    },
-    data: {
-      status: "skipped",
-      error: "SMS_DISABLED",
-    },
-  });
 }
 
 export async function sendGroupMessage(input: ComposeMessage, senderId: number): Promise<MessageResult> {
@@ -194,9 +182,6 @@ export async function sendGroupMessage(input: ComposeMessage, senderId: number):
     }
 
     const smsSent = 0;
-    if (sendSms && !env.SMS_ENABLED) {
-      await handleSmsDisabled(result.id);
-    }
 
     await prisma.message.update({
       where: { id: result.id },
@@ -294,9 +279,6 @@ export async function sendBlastMessage(input: BlastMessage, senderId: number): P
     }
 
     const smsSent = 0;
-    if (sendSms && !env.SMS_ENABLED) {
-      await handleSmsDisabled(result.id);
-    }
 
     await prisma.message.update({
       where: { id: result.id },
