@@ -6,6 +6,7 @@ import type { Prospect } from "@/schema/referral";
 import type { EmailSuppressionReason } from "@/generated/prisma/client";
 import { AppError, transformError } from "@/utils/errors";
 import { env } from "@/env";
+import { generateUnsubscribeToken } from "@/lib/unsubscribe-tokens";
 
 const transport = nodemailer.createTransport({
   host: env.SMTP_HOST,
@@ -153,12 +154,13 @@ interface GroupEmailParams {
   body: string;
   senderName: string;
   replyTo: string;
+  groupId: number;
 }
 
 export async function sendGroupEmails(
   params: GroupEmailParams,
 ): Promise<{ sent: number; failed: number; suppressed: number }> {
-  const { recipients, subject, body, senderName, replyTo } = params;
+  const { recipients, subject, body, senderName, replyTo, groupId } = params;
 
   const emails = recipients.map((r) => r.email);
   const { valid, suppressed } = await filterSuppressedEmails(emails);
@@ -172,6 +174,8 @@ export async function sendGroupEmails(
 
     const results = await Promise.allSettled(
       batch.map(async (recipient) => {
+        const token = generateUnsubscribeToken(recipient.memberId, groupId);
+        const unsubscribeUrl = `${env.APP_URL}/api/unsubscribe?token=${token}`;
         const htmlWithFooter = body + CAN_SPAM_FOOTER;
 
         await transport.sendMail({
@@ -184,7 +188,7 @@ export async function sendGroupEmails(
             "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
             "List-Unsubscribe": {
               prepared: true,
-              value: `<https://example.com/unsubscribe>`,
+              value: `<${unsubscribeUrl}>`,
             },
           },
         });

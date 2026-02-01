@@ -19,6 +19,12 @@ const envSchema = z.object({
   // Shared secret for HMAC token validation with PRFC portal
   PRFC_PORTAL_SECRET: z.string().min(32).optional(),
 
+  // Unsubscribe token signing secret (256-bit minimum)
+  UNSUBSCRIBE_SECRET: z.string().min(32),
+
+  // Application base URL for generating unsubscribe links
+  APP_URL: z.url().default("http://localhost:3000"),
+
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
 });
 
