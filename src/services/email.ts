@@ -1,8 +1,10 @@
 import "server-only";
 import nodemailer from "nodemailer";
 import path from "path";
+import prisma from "@/lib/db";
 import type { Prospect } from "@/schema/referral";
-import { AppError } from "@/utils/errors";
+import type { EmailSuppressionReason } from "@/generated/prisma/client";
+import { AppError, transformError } from "@/utils/errors";
 import { env } from "@/env";
 
 const transport = nodemailer.createTransport({
@@ -13,6 +15,17 @@ const transport = nodemailer.createTransport({
     user: env.SMTP_USER,
     pass: env.SMTP_PASS,
   },
+  pool: true,
+  maxConnections: 5,
+  maxMessages: 100,
+  rateLimit: 10,
+  rateDelta: 1000,
+  socketTimeout: 45000,
+  connectionTimeout: 30000,
+});
+
+process.on("SIGTERM", () => {
+  transport.close();
 });
 
 interface SendReferralEmailParams {
@@ -81,4 +94,116 @@ function generateEmailHtml(prospectName: string, memberName: string, referralCod
       </div>
     </div>
   </div>`;
+}
+
+export async function isEmailSuppressed(email: string): Promise<boolean> {
+  try {
+    const suppression = await prisma.emailSuppression.findUnique({
+      where: { email: email.toLowerCase() },
+    });
+    return suppression !== null;
+  } catch (error) {
+    throw transformError(error);
+  }
+}
+
+export async function suppressEmail(email: string, reason: EmailSuppressionReason): Promise<void> {
+  try {
+    await prisma.emailSuppression.upsert({
+      where: { email: email.toLowerCase() },
+      update: { reason, suppressedAt: new Date() },
+      create: { email: email.toLowerCase(), reason },
+    });
+  } catch (error) {
+    throw transformError(error);
+  }
+}
+
+export async function filterSuppressedEmails(emails: string[]): Promise<{ valid: string[]; suppressed: string[] }> {
+  try {
+    const suppressions = await prisma.emailSuppression.findMany({
+      where: { email: { in: emails.map((e) => e.toLowerCase()) } },
+      select: { email: true },
+    });
+
+    const suppressedSet = new Set(suppressions.map((s) => s.email));
+
+    return {
+      valid: emails.filter((e) => !suppressedSet.has(e.toLowerCase())),
+      suppressed: emails.filter((e) => suppressedSet.has(e.toLowerCase())),
+    };
+  } catch (error) {
+    throw transformError(error);
+  }
+}
+
+const BATCH_SIZE = 10;
+const BATCH_DELAY_MS = 1000;
+const CAN_SPAM_FOOTER = `
+<hr>
+<p style="font-size: 12px; color: #666;">
+  <strong>Paso Robles Food Cooperative, Inc.</strong><br>
+  P.O. Box 922, Paso Robles, CA 93447
+</p>
+`;
+
+interface GroupEmailParams {
+  recipients: Array<{ email: string; memberId: number; name: string }>;
+  subject: string;
+  body: string;
+  senderName: string;
+  replyTo: string;
+}
+
+export async function sendGroupEmails(
+  params: GroupEmailParams,
+): Promise<{ sent: number; failed: number; suppressed: number }> {
+  const { recipients, subject, body, senderName, replyTo } = params;
+
+  const emails = recipients.map((r) => r.email);
+  const { valid, suppressed } = await filterSuppressedEmails(emails);
+  const validRecipients = recipients.filter((r) => valid.includes(r.email));
+
+  let sent = 0;
+  let failed = 0;
+
+  for (let i = 0; i < validRecipients.length; i += BATCH_SIZE) {
+    const batch = validRecipients.slice(i, i + BATCH_SIZE);
+
+    const results = await Promise.allSettled(
+      batch.map(async (recipient) => {
+        const htmlWithFooter = body + CAN_SPAM_FOOTER;
+
+        await transport.sendMail({
+          from: `${senderName} <${env.FROM_EMAIL}>`,
+          to: recipient.email,
+          replyTo,
+          subject,
+          html: htmlWithFooter,
+          headers: {
+            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+            "List-Unsubscribe": {
+              prepared: true,
+              value: `<https://example.com/unsubscribe>`,
+            },
+          },
+        });
+      }),
+    );
+
+    for (const result of results) {
+      if (result.status === "fulfilled") {
+        sent++;
+      } else {
+        failed++;
+        console.error("[EMAIL_SEND_ERROR]", result.reason);
+      }
+    }
+
+    if (i + BATCH_SIZE < validRecipients.length) {
+      await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY_MS));
+    }
+  }
+
+  return { sent, failed, suppressed: suppressed.length };
 }
