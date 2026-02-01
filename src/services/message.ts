@@ -5,13 +5,7 @@ import { AppError, transformError } from "@/utils/errors";
 import { getGroupRecipients } from "@/services/contact-group";
 import { sendGroupEmails } from "@/services/email";
 import type { ComposeMessage, BlastMessage } from "@/schema/contact-group";
-
-export interface MemberDetails {
-  id: number;
-  name: string;
-  email: string;
-  phone?: string;
-}
+import type { MockMember } from "@/lib/mock-members";
 
 export interface MessageResult {
   messageId: number;
@@ -45,18 +39,18 @@ export function validateSmsAllowed(): void {
 }
 
 // TODO: Replace with Member Portal API integration
-export async function getMemberDetails(memberIds: number[]): Promise<MemberDetails[]> {
+export async function getMemberDetails(memberIds: number[]): Promise<MockMember[]> {
   return memberIds.map((id) => ({
-    id,
-    name: `Member ${id}`,
-    email: `member${id}@example.com`,
-    phone: `+1555000${String(id).padStart(4, "0")}`,
+    ownerid: id,
+    ownername: `Member ${id}`,
+    owneremail: `member${id}@example.com`,
+    ownerphone: `+1555000${String(id).padStart(4, "0")}`,
   }));
 }
 
 async function sendEmailsForMessage(
   messageId: number,
-  recipients: MemberDetails[],
+  recipients: MockMember[],
   subject: string,
   body: string,
   groupId: number | null,
@@ -64,9 +58,9 @@ async function sendEmailsForMessage(
   try {
     const emailResult = await sendGroupEmails({
       recipients: recipients.map((r) => ({
-        email: r.email,
-        memberId: r.id,
-        name: r.name,
+        email: r.owneremail,
+        memberId: r.ownerid,
+        name: r.ownername,
       })),
       subject,
       body,
@@ -80,7 +74,7 @@ async function sendEmailsForMessage(
         where: {
           messageId,
           channel: "email",
-          memberId: { in: recipients.map((r) => r.id) },
+          memberId: { in: recipients.map((r) => r.ownerid) },
         },
         data: {
           status: "sent",
@@ -92,7 +86,7 @@ async function sendEmailsForMessage(
         where: {
           messageId,
           channel: "email",
-          memberId: { in: recipients.map((r) => r.id) },
+          memberId: { in: recipients.map((r) => r.ownerid) },
         },
         data: {
           status: "failed",
@@ -174,7 +168,7 @@ export async function sendGroupMessage(input: ComposeMessage, senderId: number):
     let emailsFailed = 0;
 
     if (sendEmail && emailRecipientIds.length > 0) {
-      const emailRecipients = members.filter((m) => emailRecipientIds.includes(m.id));
+      const emailRecipients = members.filter((m) => emailRecipientIds.includes(m.ownerid));
       const emailResult = await sendEmailsForMessage(result.id, emailRecipients, subject, body, groupId);
       emailsSent = emailResult.sent;
       emailsFailed = emailResult.failed;
