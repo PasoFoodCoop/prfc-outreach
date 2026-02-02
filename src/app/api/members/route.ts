@@ -1,36 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Ratelimit } from "@upstash/ratelimit";
-import { Redis } from "@upstash/redis";
-import { env } from "@/env";
 import { verifySession } from "@/lib/dal";
+import { membersRateLimiter } from "@/lib/rate-limit";
 import { getAllMembers } from "@/lib/api/member-api";
 import { apiErrorHandler } from "@/utils/errors";
 
-function createMembersRateLimiter() {
-  if (!env.UPSTASH_REDIS_REST_URL || !env.UPSTASH_REDIS_REST_TOKEN) {
-    return null;
-  }
-
-  const redis = new Redis({
-    url: env.UPSTASH_REDIS_REST_URL,
-    token: env.UPSTASH_REDIS_REST_TOKEN,
-  });
-
-  return new Ratelimit({
-    redis,
-    limiter: Ratelimit.slidingWindow(10, "60 s"),
-    prefix: "prfc:members",
-  });
-}
-
-const rateLimiter = createMembersRateLimiter();
-
 export async function GET(req: NextRequest) {
   try {
-    if (rateLimiter) {
+    if (membersRateLimiter) {
       const forwarded = req.headers.get("x-forwarded-for");
       const ip = forwarded?.split(",")[0]?.trim() ?? "127.0.0.1";
-      const { success, remaining, reset } = await rateLimiter.limit(ip);
+      const { success, remaining, reset } = await membersRateLimiter.limit(ip);
 
       if (!success) {
         return NextResponse.json(

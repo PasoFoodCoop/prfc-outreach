@@ -1,5 +1,6 @@
 import "server-only";
 import { env } from "@/env";
+import { AppError } from "@/utils/errors";
 import type { MockMember } from "@/lib/mock-members";
 
 export interface MemberSummary {
@@ -17,7 +18,7 @@ async function getMockMemberDetails(memberIds: number[]): Promise<MockMember[]> 
 }
 
 async function getRealMemberDetails(_memberIds: number[]): Promise<MockMember[]> {
-  throw new Error("Member Portal API integration not yet implemented");
+  throw new AppError("INTERNAL_ERROR", "Service temporarily unavailable");
 }
 
 async function getMockAllActiveMemberIds(): Promise<number[]> {
@@ -26,7 +27,7 @@ async function getMockAllActiveMemberIds(): Promise<number[]> {
 }
 
 async function getRealAllActiveMemberIds(): Promise<number[]> {
-  throw new Error("Member Portal API integration not yet implemented");
+  throw new AppError("INTERNAL_ERROR", "Service temporarily unavailable");
 }
 
 async function getMockAllMembers(): Promise<MemberSummary[]> {
@@ -35,7 +36,7 @@ async function getMockAllMembers(): Promise<MemberSummary[]> {
 }
 
 async function getRealAllMembers(): Promise<MemberSummary[]> {
-  throw new Error("Member Portal API integration not yet implemented");
+  throw new AppError("INTERNAL_ERROR", "Service temporarily unavailable");
 }
 
 async function getMockMemberById(id: number): Promise<MockMember | null> {
@@ -44,7 +45,7 @@ async function getMockMemberById(id: number): Promise<MockMember | null> {
 }
 
 async function getRealMemberById(_id: number): Promise<MockMember | null> {
-  throw new Error("Member Portal API integration not yet implemented");
+  throw new AppError("INTERNAL_ERROR", "Service temporarily unavailable");
 }
 
 export async function getMemberDetails(memberIds: number[]): Promise<MockMember[]> {
