@@ -19,6 +19,18 @@ const envSchema = z.object({
   // Shared secret for HMAC token validation with PRFC portal
   PRFC_PORTAL_SECRET: z.string().min(32).optional(),
 
+  // SMS feature flag (disabled by default)
+  SMS_ENABLED: z
+    .string()
+    .default("false")
+    .transform((v) => v === "true"),
+
+  // Member Portal API integration toggle
+  USE_MOCK_MEMBER_API: z
+    .string()
+    .default("true")
+    .transform((v) => v === "true"),
+
   // Unsubscribe token signing secret (256-bit minimum)
   UNSUBSCRIBE_SECRET: z.string().min(32),
 
