@@ -32,6 +32,7 @@ The PRFC Connect team consists of 18 Cal Poly students. Over the course of about
 - [Kyle Lin](https://www.linkedin.com/in/kyle-lin-584235295/) - Software Developer
 - [Snehil Kakani](https://www.linkedin.com/in/snehilkakani/) - Software Developer
 - [First Last](https://www.linkedin.com/in/your-profile/) - Software Developer
+- [Ethan Ma](https://www.linkedin.com/in/ethan-ma-389568319/) - Software Developer
 
 ## Documentation
 
