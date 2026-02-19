@@ -1,12 +1,11 @@
 import "server-only";
 import nodemailer from "nodemailer";
 import path from "path";
-import prisma from "@/lib/db";
 import type { Prospect } from "@/schema/referral";
-import type { EmailSuppressionReason } from "@/generated/prisma/client";
-import { AppError, transformError } from "@/utils/errors";
+import { AppError } from "@/utils/errors";
 import { env } from "@/env";
 import { generateUnsubscribeToken } from "@/lib/unsubscribe-tokens";
+import { filterSuppressedEmails } from "./email-suppression";
 
 const transport = nodemailer.createTransport({
   host: env.SMTP_HOST,
@@ -98,52 +97,17 @@ function generateEmailHtml(prospectName: string, memberName: string, referralCod
   </div>`;
 }
 
-export async function isEmailSuppressed(email: string): Promise<boolean> {
-  try {
-    const suppression = await prisma.emailSuppression.findUnique({
-      where: { email: email.toLowerCase() },
-    });
-    return suppression !== null;
-  } catch (error) {
-    throw transformError(error);
-  }
-}
-
-export async function suppressEmail(email: string, reason: EmailSuppressionReason): Promise<void> {
-  try {
-    await prisma.emailSuppression.upsert({
-      where: { email: email.toLowerCase() },
-      update: { reason, suppressedAt: new Date() },
-      create: { email: email.toLowerCase(), reason },
-    });
-  } catch (error) {
-    throw transformError(error);
-  }
-}
-
-export async function filterSuppressedEmails(emails: string[]): Promise<{ valid: string[]; suppressed: string[] }> {
-  try {
-    const suppressions = await prisma.emailSuppression.findMany({
-      where: { email: { in: emails.map((e) => e.toLowerCase()) } },
-      select: { email: true },
-    });
-
-    const suppressedSet = new Set(suppressions.map((s) => s.email));
-
-    return {
-      valid: emails.filter((e) => !suppressedSet.has(e.toLowerCase())),
-      suppressed: emails.filter((e) => suppressedSet.has(e.toLowerCase())),
-    };
-  } catch (error) {
-    throw transformError(error);
-  }
-}
-
 const BATCH_SIZE = 10;
 const BATCH_DELAY_MS = 1000;
 
+export interface Recipient {
+  email: string;
+  memberId: number;
+  name: string;
+}
+
 interface GroupEmailParams {
-  recipients: Array<{ email: string; memberId: number; name: string }>;
+  recipients: Array<Recipient>;
   subject: string;
   body: string;
   senderName: string;
