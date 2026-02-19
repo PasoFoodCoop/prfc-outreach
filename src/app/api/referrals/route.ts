@@ -5,17 +5,19 @@ import { sendReferralEmails } from "@/services/email";
 import { rateLimiter } from "@/lib/rate-limit";
 import { getIdempotentResponse, setIdempotentResponse } from "@/lib/idempotency";
 import { validateOrigin } from "@/lib/csrf";
-import { requireAdmin } from "@/lib/dal";
-import { transformError, errorStatusMap } from "@/utils/errors";
+import { verifySession, requireAdmin } from "@/lib/dal";
+import { apiErrorHandler, transformError, errorStatusMap } from "@/utils/errors";
 
 export async function POST(req: NextRequest) {
-  if (!validateOrigin(req)) {
-    return NextResponse.json({ error: { code: "FORBIDDEN", message: "Invalid origin" } }, { status: 403 });
-  }
-
   const idempotencyKey = req.headers.get("idempotency-key");
 
   try {
+    if (!validateOrigin(req)) {
+      return NextResponse.json({ error: { code: "FORBIDDEN", message: "Invalid origin" } }, { status: 403 });
+    }
+
+    await verifySession();
+
     if (idempotencyKey) {
       const cached = await getIdempotentResponse(idempotencyKey);
       if (cached) {
@@ -86,9 +88,6 @@ export async function GET() {
     const referrals = await getAllReferrals();
     return NextResponse.json(referrals, { status: 200 });
   } catch (error) {
-    const appError = transformError(error);
-    const status = errorStatusMap[appError.code];
-    console.error(`[${appError.code}] ${appError.message}`, appError.context);
-    return NextResponse.json({ error: { code: appError.code, message: appError.message } }, { status });
+    return apiErrorHandler(error);
   }
 }
