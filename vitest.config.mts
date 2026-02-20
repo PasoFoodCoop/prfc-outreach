@@ -8,22 +8,45 @@ nextEnv.loadEnvConfig(process.cwd());
 export default defineConfig({
   plugins: [tsconfigPaths(), react()],
   test: {
-    environment: "jsdom",
     globals: true,
     setupFiles: ["./vitest.setup.ts"],
-    include: ["test/**/*.test.ts", "test/**/*.test.tsx"],
-    exclude: ["node_modules", ".next", "e2e"],
-    environmentMatchGlobs: [
-      ["test/services/**", "node"],
-      ["test/actions/**", "node"],
-      ["test/api/**", "node"],
-      ["test/utils/errors.test.ts", "node"],
-      ["test/auth/**", "node"],
-    ],
     coverage: {
       provider: "v8",
       include: ["src/**/*.{ts,tsx}"],
       exclude: ["src/components/ui/**", "src/generated/**"],
     },
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "node",
+          environment: "node",
+          include: [
+            "test/services/**",
+            "test/actions/**",
+            "test/api/**",
+            "test/auth/**",
+            "test/lib/**",
+            "test/utils/errors.test.ts",
+          ],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "jsdom",
+          environment: "jsdom",
+          include: ["test/**/*.test.ts", "test/**/*.test.tsx"],
+          exclude: [
+            "test/services/**",
+            "test/actions/**",
+            "test/api/**",
+            "test/auth/**",
+            "test/lib/**",
+            "test/utils/errors.test.ts",
+          ],
+        },
+      },
+    ],
   },
 });

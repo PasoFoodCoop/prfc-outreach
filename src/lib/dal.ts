@@ -3,6 +3,7 @@ import { cache } from "react";
 import { cookies } from "next/headers";
 import { createHmac, timingSafeEqual } from "crypto";
 import { AppError } from "@/utils/errors";
+import { getMemberById } from "@/lib/api/member-api";
 
 export const AUTH_COOKIE = "prfc_auth";
 const TOKEN_EXPIRY_MS = 3600000;
@@ -22,6 +23,10 @@ export function getSecret(): string {
 export interface Session {
   ownerid: number;
   isAdmin: boolean;
+}
+
+export interface SessionWithName extends Session {
+  ownername: string;
 }
 
 function verifyHmac(payload: string, signature: string, secret: string): boolean {
@@ -79,6 +84,12 @@ export const getSession = cache(async (): Promise<Session | null> => {
   }
 
   return validateToken(authCookie.value, getSecret());
+});
+
+export const getSessionWithName = cache(async (): Promise<SessionWithName> => {
+  const session = await verifySession();
+  const member = await getMemberById(session.ownerid);
+  return { ...session, ownername: member?.ownername ?? "Member" };
 });
 
 export async function requireAdmin(): Promise<Session> {

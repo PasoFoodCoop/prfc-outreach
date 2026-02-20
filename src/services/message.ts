@@ -15,6 +15,49 @@ export interface MessageResult {
   failedCount: number;
 }
 
+export interface MessageSummary {
+  id: number;
+  subject: string;
+  body: string;
+  sentAt: Date;
+  senderId: number;
+  emailCount: number;
+  smsCount: number;
+  failedCount: number;
+}
+
+const DEFAULT_MESSAGE_HISTORY_LIMIT = 20;
+const MAX_MESSAGE_HISTORY_LIMIT = 100;
+
+export async function getGroupMessageHistory(
+  groupId: number,
+  limit: number = DEFAULT_MESSAGE_HISTORY_LIMIT,
+): Promise<MessageSummary[]> {
+  try {
+    const effectiveLimit = Math.min(Math.max(1, limit), MAX_MESSAGE_HISTORY_LIMIT);
+
+    const messages = await prisma.message.findMany({
+      where: { groupId },
+      select: {
+        id: true,
+        subject: true,
+        body: true,
+        sentAt: true,
+        senderId: true,
+        emailCount: true,
+        smsCount: true,
+        failedCount: true,
+      },
+      orderBy: { sentAt: "desc" },
+      take: effectiveLimit,
+    });
+
+    return messages;
+  } catch (error) {
+    throw transformError(error);
+  }
+}
+
 export function isQuietHours(): boolean {
   const formatter = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/Los_Angeles",

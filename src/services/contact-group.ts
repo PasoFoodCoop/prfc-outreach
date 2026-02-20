@@ -1,6 +1,7 @@
 import "server-only";
 import prisma from "@/lib/db";
 import { AppError, transformError } from "@/utils/errors";
+import { getMemberDetails } from "@/lib/api/member-api";
 import type { ContactGroup, ContactGroupMember } from "@/generated/prisma/client";
 import type { CreateContactGroup, UpdateContactGroup, GroupMember, UpdateNotification } from "@/schema/contact-group";
 
@@ -12,6 +13,16 @@ export interface GroupWithCount extends ContactGroup {
 
 export interface GroupWithMembers extends ContactGroup {
   members: ContactGroupMember[];
+  memberCount: number;
+}
+
+export interface EnrichedGroupMember extends ContactGroupMember {
+  ownername: string;
+  owneremail: string;
+}
+
+export interface GroupWithEnrichedMembers extends ContactGroup {
+  members: EnrichedGroupMember[];
   memberCount: number;
 }
 
@@ -203,6 +214,35 @@ export async function getGroupRecipients(groupId: number, channel: "email" | "sm
       select: { memberId: true },
     });
     return members.map((m) => m.memberId);
+  } catch (error) {
+    throw transformError(error);
+  }
+}
+
+export async function enrichGroupMembers(group: GroupWithMembers): Promise<GroupWithEnrichedMembers> {
+  const memberIds = group.members.map((m) => m.memberId);
+
+  if (memberIds.length === 0) {
+    return { ...group, members: [] };
+  }
+
+  try {
+    const details = await getMemberDetails(memberIds);
+    const detailMap = new Map(details.map((d) => [d.ownerid, d]));
+
+    const enrichedMembers: EnrichedGroupMember[] = group.members.map((member) => {
+      const detail = detailMap.get(member.memberId);
+      return {
+        ...member,
+        ownername: detail?.ownername ?? "Unknown Member",
+        owneremail: detail?.owneremail ?? "",
+      };
+    });
+
+    return {
+      ...group,
+      members: enrichedMembers,
+    };
   } catch (error) {
     throw transformError(error);
   }
