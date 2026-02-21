@@ -16,6 +16,27 @@
   font-style: normal;
 }
 
+@font-face {
+  font-family: "Angkor";
+  src: url("/fonts/Angkor-Regular.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Khula";
+  src: url("/fonts/Khula-Regular.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Khula";
+  src: url("/fonts/Khula-Bold.ttf") format("truetype");
+  font-weight: bold;
+  font-style: normal;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

@@ -10,7 +10,10 @@ module.exports = {
     extend: {
       colors: {
         "prfc-red": "#831002",
-        "prfc-brown": "#523018",
+        "prfc-brown": "#523019",
+        "paso-light-brown": "#E3CDBC",
+        "paso-accent-black": "#231F1F",
+        "paso-grey": "#F7F7F7",
         "prfc-tan": "#fadfc4",
         "prfc-cream": "#EDDDCC",
         "prfc-dark-brown": "#3e1c00",
@@ -60,6 +63,8 @@ module.exports = {
       fontFamily: {
         komika: ["Komika Axis", "sans-serif"],
         montserrat: ["Montserrat", "sans-serif"],
+        angkor: ["Angkor", "cursive"],
+        khula: ["Khula", "sans-serif"],
       },
       borderRadius: {
         lg: "var(--radius)",
