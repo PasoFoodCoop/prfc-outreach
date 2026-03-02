@@ -252,7 +252,6 @@ export function GroupsContent({ groups, isAdmin, ownerId }: GroupsContentProps) 
         }}
         group={modal.type === "detail" ? modal.group : EMPTY_GROUP}
         onEdit={handleEdit}
-        onViewAllMembers={handleEdit}
       />
 
       <GroupEditModal
