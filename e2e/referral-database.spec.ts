@@ -2,9 +2,9 @@ import { test, expect } from "@playwright/test";
 
 async function loginAsAdmin(page: import("@playwright/test").Page) {
   await page.goto("/dev/mock-portal");
-  await page.getByLabel("Owner ID").fill("100184");
-  await page.getByLabel("Admin access").check();
-  await page.getByRole("button", { name: "Enter PRFC Connect" }).click();
+  await page.getByText("Dev Tools").click();
+  await page.getByLabel("Select Member").selectOption("100001");
+  await page.getByRole("button", { name: "Login" }).click();
   await page.waitForURL("/");
   await page.goto("/referral-database");
 }
@@ -25,7 +25,7 @@ test.describe("Referral Database Page", () => {
   test("search filters table rows", async ({ page }) => {
     await loginAsAdmin(page);
 
-    const searchInput = page.getByPlaceholder(/search/i);
+    const searchInput = page.getByRole("textbox", { name: "Search referrals" });
     await searchInput.fill("test");
 
     await expect(page.getByRole("table")).toBeVisible();

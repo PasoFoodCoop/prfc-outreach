@@ -15,6 +15,8 @@ import {
   updateGroup,
   deleteGroup,
   isGroupOwner,
+  getGroupById,
+  enrichGroupMembers,
   addMembersToGroup,
   removeMemberFromGroup,
   updateMemberNotifications,
@@ -23,6 +25,44 @@ import { sendGroupMessage, sendBlastMessage } from "@/services/message";
 import { transformError } from "@/utils/errors";
 import type { ActionResult } from "@/lib/action-types";
 import type { MessageResult } from "@/services/message";
+
+export interface EnrichedGroupData {
+  id: number;
+  name: string;
+  description: string | null;
+  members: Array<{ memberId: number; ownername: string }>;
+  memberCount: number;
+}
+
+export async function fetchEnrichedGroup(groupId: number): Promise<ActionResult<EnrichedGroupData>> {
+  try {
+    const session = await verifySession();
+
+    if (!session.isAdmin && !(await isGroupOwner(groupId, session.ownerid))) {
+      return { success: false, error: "You do not have permission to view this group" };
+    }
+
+    const group = await getGroupById(groupId);
+    const enriched = await enrichGroupMembers(group);
+
+    return {
+      success: true,
+      data: {
+        id: enriched.id,
+        name: enriched.name,
+        description: enriched.description,
+        members: enriched.members.map((m) => ({
+          memberId: m.memberId,
+          ownername: m.ownername,
+        })),
+        memberCount: enriched.memberCount,
+      },
+    };
+  } catch (error) {
+    const appError = transformError(error);
+    return { success: false, error: appError.message };
+  }
+}
 
 export async function createContactGroup(formData: FormData): Promise<ActionResult<{ id: number }>> {
   try {

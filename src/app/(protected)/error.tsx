@@ -9,7 +9,7 @@ export default function ProtectedError({ error, reset }: { error: Error & { dige
   }, [error]);
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-background">
+    <div className="flex min-h-[50vh] items-center justify-center">
       <div className="text-center px-4">
         <h1 className="font-komika text-prfc-red text-4xl mb-4">Database Error</h1>
         <p className="font-montserrat text-prfc-dark-brown mb-6">Failed to load referral database.</p>
@@ -28,6 +28,6 @@ export default function ProtectedError({ error, reset }: { error: Error & { dige
           </Link>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

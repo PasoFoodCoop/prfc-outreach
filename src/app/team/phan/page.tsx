@@ -32,13 +32,7 @@ export default function PhanPage() {
 
       <Button onClick={() => setOpen(true)}>Open Detail View</Button>
 
-      <GroupDetailViewModal
-        open={open}
-        onOpenChange={setOpen}
-        group={mockGroup}
-        onEdit={() => alert("Edit clicked")}
-        onViewAllMembers={() => alert("View all members clicked")}
-      />
+      <GroupDetailViewModal open={open} onOpenChange={setOpen} group={mockGroup} onEdit={() => alert("Edit clicked")} />
     </div>
   );
 }

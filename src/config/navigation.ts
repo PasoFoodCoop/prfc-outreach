@@ -14,12 +14,18 @@ export const NAV_CONFIG: Record<AuthState, NavItem[]> = {
   member: [
     { label: "Home", href: "/" },
     { label: "My Groups", href: "/groups" },
+    { label: "Messages", href: "/messages" },
+    { label: "Events", href: "/events" },
     { label: "Referral", href: "/referral" },
+    { label: "Settings", href: "/settings" },
   ],
   admin: [
     { label: "Home", href: "/" },
     { label: "Groups", href: "/groups" },
+    { label: "Messages", href: "/messages" },
+    { label: "Events", href: "/events" },
     { label: "Referral Database", href: "/referral-database" },
     { label: "Broadcast", href: "/broadcast" },
+    { label: "Settings", href: "/settings" },
   ],
 };

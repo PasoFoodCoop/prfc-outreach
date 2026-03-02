@@ -21,7 +21,7 @@ The platform will expand to include contact groups, allowing members to organize
 
 ### Team
 
-The PRFC Connect team consists of 18 Cal Poly students. Over the course of about 9 months, we work as a team to deploy this web application.
+The PRFC Connect team consists of 12 Cal Poly students. Over the course of about 9 months, we work as a team to deploy this web application.
 
 - [Austin Lee](https://www.linkedin.com/in/austinlee17/) - Project Manager
 - [Kevin Rutledge](https://www.linkedin.com/in/rutledge-kevin/) - Tech Lead
