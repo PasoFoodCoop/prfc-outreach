@@ -9,15 +9,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { getAvatarColor, getInitials } from "@/utils/avatar";
+import { useTopBarAction } from "@/components/layout/top-bar-action-context";
 
 interface TopBarProps {
   userName: string;
   userRole: "Admin Manager" | "Member";
-  actionLabel?: string;
-  onActionClick?: () => void;
 }
 
-export function TopBar({ userName, userRole, actionLabel, onActionClick }: TopBarProps) {
+export function TopBar({ userName, userRole }: TopBarProps) {
+  const action = useTopBarAction();
   const initials = getInitials(userName);
   const avatarColor = getAvatarColor(userName);
 
@@ -45,14 +45,14 @@ export function TopBar({ userName, userRole, actionLabel, onActionClick }: TopBa
           </div>
 
           <div className="ml-auto flex shrink-0 items-center gap-2 md:gap-3">
-            {actionLabel ? (
+            {action ? (
               <Button
                 type="button"
-                onClick={onActionClick}
+                onClick={action.onClick}
                 className="h-10 bg-paso-accent-black px-4 text-white hover:bg-paso-accent-black/90"
               >
                 <Plus className="h-4 w-4" aria-hidden="true" />
-                <span>{actionLabel}</span>
+                <span>{action.label}</span>
               </Button>
             ) : null}
 

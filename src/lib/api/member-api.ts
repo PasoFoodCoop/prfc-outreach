@@ -9,12 +9,8 @@ export interface MemberSummary {
 }
 
 async function getMockMemberDetails(memberIds: number[]): Promise<MockMember[]> {
-  return memberIds.map((id) => ({
-    ownerid: id,
-    ownername: `Member ${id}`,
-    owneremail: `member${id}@example.com`,
-    ownerphone: `+1555000${String(id).padStart(4, "0")}`,
-  }));
+  const { findMemberById } = await import("@/lib/mock-members");
+  return memberIds.map((id) => findMemberById(id)).filter((m): m is MockMember => m !== undefined);
 }
 
 async function getRealMemberDetails(_memberIds: number[]): Promise<MockMember[]> {

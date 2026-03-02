@@ -14,9 +14,29 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   projects: [
+    { name: "setup", testMatch: /.*\.setup\.ts/ },
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
+      testIgnore: /.*groups.*\.spec\.ts/,
+    },
+    {
+      name: "groups-admin",
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "playwright/.auth/admin.json",
+      },
+      testMatch: /.*groups.*\.spec\.ts/,
+      dependencies: ["setup"],
+    },
+    {
+      name: "groups-member",
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "playwright/.auth/member.json",
+      },
+      testMatch: /.*groups.*\.spec\.ts/,
+      dependencies: ["setup"],
     },
   ],
   webServer: {
