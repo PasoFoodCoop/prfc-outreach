@@ -177,9 +177,40 @@ export async function addMembersToGroup(
 
 export async function removeMemberFromGroup(groupId: number, memberId: number): Promise<void> {
   try {
+    const group = await prisma.contactGroup.findUnique({
+      where: { id: groupId },
+      select: { ownerid: true },
+    });
+
+    if (group && group.ownerid === memberId) {
+      throw new AppError("VALIDATION_ERROR", "Cannot remove the group owner");
+    }
+
     await prisma.contactGroupMember.delete({
       where: {
         groupId_memberId: { groupId, memberId },
+      },
+    });
+  } catch (error) {
+    throw transformError(error);
+  }
+}
+
+export async function removeMembersFromGroup(groupId: number, memberIds: number[]): Promise<{ count: number }> {
+  try {
+    const group = await prisma.contactGroup.findUnique({
+      where: { id: groupId },
+      select: { ownerid: true },
+    });
+
+    if (group && memberIds.includes(group.ownerid)) {
+      throw new AppError("VALIDATION_ERROR", "Cannot remove the group owner");
+    }
+
+    return await prisma.contactGroupMember.deleteMany({
+      where: {
+        groupId,
+        memberId: { in: memberIds },
       },
     });
   } catch (error) {

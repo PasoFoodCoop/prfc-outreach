@@ -18,7 +18,7 @@ export default defineConfig({
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
-      testIgnore: [/.*groups.*\.spec\.ts/, /.*home-dashboard.*\.spec\.ts/],
+      testIgnore: [/.*groups.*\.spec\.ts/, /.*home-dashboard.*\.spec\.ts/, /user-menu|sidebar|navigation|search/],
     },
     {
       name: "groups-admin",
@@ -54,6 +54,24 @@ export default defineConfig({
         storageState: "playwright/.auth/member.json",
       },
       testMatch: /home-dashboard-member\.spec\.ts/,
+      dependencies: ["setup"],
+    },
+    {
+      name: "authenticated-admin",
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "playwright/.auth/admin.json",
+      },
+      testMatch: /user-menu|sidebar|navigation|search/,
+      dependencies: ["setup"],
+    },
+    {
+      name: "authenticated-member",
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "playwright/.auth/member.json",
+      },
+      testMatch: /user-menu|sidebar|navigation|search/,
       dependencies: ["setup"],
     },
   ],
