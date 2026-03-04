@@ -39,7 +39,7 @@ export function Sidebar({ className }: SidebarProps) {
         className,
       )}
     >
-      <nav aria-label="Main navigation" className="p-4">
+      <nav aria-label="Main navigation" className="px-2 py-4">
         <ul role="list" className="flex flex-col gap-1">
           {SIDEBAR_ITEMS.map((item) => {
             const active = isItemActive(pathname, item.href);
@@ -53,7 +53,9 @@ export function Sidebar({ className }: SidebarProps) {
                   className={cn(
                     "relative flex items-center gap-3 overflow-hidden rounded-md px-4 py-3 text-sm transition-colors",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                    active ? "font-semibold text-foreground" : "font-normal text-muted-foreground hover:bg-muted/60",
+                    active
+                      ? "bg-paso-light-brown font-semibold text-foreground"
+                      : "font-normal text-muted-foreground hover:bg-muted/60",
                   )}
                 >
                   {active ? (

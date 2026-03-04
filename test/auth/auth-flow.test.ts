@@ -17,6 +17,10 @@ vi.mock("next/navigation", () => ({
   redirect: vi.fn(),
 }));
 
+vi.mock("next/cache", () => ({
+  revalidatePath: vi.fn(),
+}));
+
 // Make React cache() a passthrough so tests get fresh results
 vi.mock("react", async () => {
   const actual = await vi.importActual("react");
@@ -172,7 +176,8 @@ describe("logout server action", () => {
     await logout().catch(() => {});
 
     expect(mockCookieStore.delete).toHaveBeenCalledWith(AUTH_COOKIE);
-    expect(mockRedirect).toHaveBeenCalledWith("/");
+    // TODO: Replace with the real PRFC member portal URL in production
+    expect(mockRedirect).toHaveBeenCalledWith("/dev/mock-portal");
   });
 });
 

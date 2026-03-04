@@ -1,0 +1,84 @@
+"use client";
+
+import { useTransition } from "react";
+import Link from "next/link";
+import { ChevronDown, LogOut, SlidersVertical, UserRound } from "lucide-react";
+
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
+import { getAvatarColor, getInitials } from "@/utils/avatar";
+import { logout } from "@/actions/auth";
+
+interface UserMenuProps {
+  userName: string;
+  userRole: "Admin Manager" | "Member";
+}
+
+export function UserMenu({ userName, userRole }: UserMenuProps) {
+  const [isPending, startTransition] = useTransition();
+  const initials = getInitials(userName);
+  const avatarColor = getAvatarColor(userName);
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="group inline-flex items-center gap-2 rounded-md px-1 py-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          id="user-menu-trigger"
+          aria-label="User menu"
+        >
+          <Avatar className="h-10 w-10">
+            <AvatarFallback className={cn("text-sm font-semibold text-white")} style={{ backgroundColor: avatarColor }}>
+              {initials}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold leading-tight text-foreground">{userName}</p>
+            <p className="truncate text-xs text-muted-foreground">{userRole}</p>
+          </div>
+          <ChevronDown
+            className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180"
+            aria-hidden="true"
+          />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuItem asChild>
+          <Link href="/settings">
+            <UserRound />
+            Profile
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href="/settings">
+            <SlidersVertical />
+            Account Settings
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          className="text-destructive focus:text-destructive"
+          disabled={isPending}
+          onSelect={(e) => {
+            e.preventDefault();
+            startTransition(() => {
+              logout();
+            });
+          }}
+        >
+          <LogOut />
+          {isPending ? "Signing out…" : "Sign out"}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}

@@ -19,6 +19,7 @@ import {
   enrichGroupMembers,
   addMembersToGroup,
   removeMemberFromGroup,
+  removeMembersFromGroup,
   updateMemberNotifications,
 } from "@/services/contact-group";
 import { sendGroupMessage, sendBlastMessage } from "@/services/message";
@@ -159,6 +160,24 @@ export async function removeMember(groupId: number, memberId: number): Promise<A
 
     revalidatePath(`/groups/${groupId}`);
     return { success: true };
+  } catch (error) {
+    const appError = transformError(error);
+    return { success: false, error: appError.message };
+  }
+}
+
+export async function removeMembers(groupId: number, memberIds: number[]): Promise<ActionResult<{ count: number }>> {
+  try {
+    const session = await verifySession();
+
+    if (!session.isAdmin && !(await isGroupOwner(groupId, session.ownerid))) {
+      return { success: false, error: "You do not have permission to remove members from this group" };
+    }
+
+    const result = await removeMembersFromGroup(groupId, memberIds);
+
+    revalidatePath(`/groups/${groupId}`);
+    return { success: true, data: result };
   } catch (error) {
     const appError = transformError(error);
     return { success: false, error: appError.message };

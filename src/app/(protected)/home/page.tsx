@@ -1,6 +1,6 @@
 import { getSessionWithName } from "@/lib/dal";
 import { getAllGroups, getGroupsByOwner } from "@/services/contact-group";
-import { EntityCard } from "@/components/groups/entity-card";
+import { HomeContent } from "./home-content";
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -17,27 +17,6 @@ export default async function HomePage() {
   const sectionHeading = session.isAdmin ? "All Groups" : "My Groups";
 
   return (
-    <div>
-      <h1 className="font-angkor text-3xl text-prfc-red mb-2">
-        {greeting}, {session.ownername}!
-      </h1>
-      <h2 className="font-khula font-bold text-xl mb-6">{sectionHeading}</h2>
-
-      {groups.length === 0 ? (
-        <p className="text-muted-foreground">No groups yet.</p>
-      ) : (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {groups.map((group) => (
-            <EntityCard
-              key={group.id}
-              variant="group"
-              name={group.name}
-              memberCount={group.memberCount}
-              description={group.description}
-            />
-          ))}
-        </div>
-      )}
-    </div>
+    <HomeContent groups={groups} greeting={`${greeting}, ${session.ownername}!`} sectionHeading={sectionHeading} />
   );
 }
