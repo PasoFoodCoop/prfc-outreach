@@ -1,3 +1,9 @@
+vi.mock("@/lib/encryption", () => ({
+  encrypt: vi.fn((v: string) => v),
+  decrypt: vi.fn((v: string) => v),
+  blindIndex: vi.fn((v: string) => `hash:${v.toLowerCase()}`),
+}));
+
 import { prismaMock } from "../mocks/prisma";
 import { referralCharlie, referralLinusRedeemed, createReferralInput, allReferrals } from "../mocks/referrals";
 import {

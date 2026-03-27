@@ -1,6 +1,8 @@
 import "../mocks/next-cache";
 import "../mocks/dal";
 import "../mocks/email";
+import "../mocks/encryption";
+
 import { prismaMock, mockVerifySession, mockRequireAdmin } from "../mocks";
 import { referralCharlie, formWithTwoProspects } from "../mocks/referrals";
 import { AppError } from "@/utils/errors";

@@ -1,4 +1,5 @@
 import "../mocks/prisma";
+import "../mocks/encryption";
 import { prismaMock } from "../mocks";
 import { POST } from "@/app/api/unsubscribe/route";
 import { NextRequest } from "next/server";

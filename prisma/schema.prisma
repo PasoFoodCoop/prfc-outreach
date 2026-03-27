@@ -11,14 +11,13 @@ model Referral {
   id            Int      @id @default(autoincrement())
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
-  memberName    String   @map("member_name") @db.VarChar(255)
-  memberEmail   String   @map("member_email") @db.VarChar(255)
-  prospectName  String   @map("prospect_name") @db.VarChar(255)
-  prospectEmail String   @map("prospect_email") @db.VarChar(255)
+  memberName    String   @map("member_name") @db.VarChar(512)
+  memberEmail   String   @map("member_email") @db.VarChar(512)
+  prospectName  String   @map("prospect_name") @db.VarChar(512)
+  prospectEmail String   @map("prospect_email") @db.VarChar(512)
   referralCode  String   @map("referral_code") @db.VarChar(100)
   redeemed      Boolean  @default(false)
 
-  @@index([memberEmail])
   @@index([createdAt])
   @@index([referralCode])
   @@map("referral")
@@ -62,18 +61,19 @@ model ContactGroupMember {
 model SmsConsent {
   id             Int       @id @default(autoincrement())
   memberId       Int       @map("member_id")
-  phone          String    @db.VarChar(20)
+  phone          String    @db.VarChar(512)
+  phoneHash      String    @map("phone_hash") @db.VarChar(64)
   consentedAt    DateTime  @default(now()) @map("consented_at")
   consentMethod  String    @map("consent_method") @db.VarChar(50)
   consentText    String    @map("consent_text") @db.Text
   consentPurpose String    @map("consent_purpose") @db.VarChar(100)
-  ipAddress      String?   @map("ip_address") @db.VarChar(45)
+  ipAddress      String?   @map("ip_address") @db.VarChar(512)
   revokedAt      DateTime? @map("revoked_at")
   revokeMethod   String?   @map("revoke_method") @db.VarChar(50)
   revokeMessage  String?   @map("revoke_message") @db.VarChar(500)
 
   @@index([memberId])
-  @@index([phone])
+  @@index([phoneHash])
   @@index([consentedAt])
   @@map("sms_consent")
 }
@@ -86,7 +86,8 @@ enum EmailSuppressionReason {
 
 model EmailSuppression {
   id           Int                    @id @default(autoincrement())
-  email        String                 @unique @db.VarChar(255)
+  email        String                 @db.VarChar(512)
+  emailHash    String                 @unique @map("email_hash") @db.VarChar(64)
   reason       EmailSuppressionReason
   suppressedAt DateTime               @default(now()) @map("suppressed_at")
 
