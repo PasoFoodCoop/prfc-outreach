@@ -1,5 +1,6 @@
 import "../mocks/dal";
 import "../mocks/csrf";
+import "../mocks/encryption";
 import { prismaMock, createMockRequest, referralCharlie, mockRequireAdmin, mockValidateOrigin } from "../mocks";
 import { PATCH, DELETE } from "@/app/api/referrals/[id]/route";
 import { AppError } from "@/utils/errors";

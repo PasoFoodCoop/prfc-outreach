@@ -1,5 +1,11 @@
+vi.mock("@/lib/encryption", () => ({
+  encrypt: vi.fn((v: string) => `encrypted:${v}`),
+  decrypt: vi.fn((v: string) => v.replace("encrypted:", "")),
+  blindIndex: vi.fn((v: string) => `hash:${v.toLowerCase()}`),
+}));
+
 import { prismaMock } from "../mocks/prisma";
-import { suppressedLucy, suppressedMarcie } from "../mocks/email-suppressions";
+import { suppressedLucy } from "../mocks/email-suppressions";
 import { isEmailSuppressed, suppressEmail, filterSuppressedEmails } from "@/services/email-suppression";
 
 describe("isEmailSuppressed", () => {
@@ -19,46 +25,49 @@ describe("isEmailSuppressed", () => {
     expect(result).toBe(false);
   });
 
-  it("normalizes email to lowercase for lookup", async () => {
+  it("queries by blind index hash", async () => {
     prismaMock.emailSuppression.findUnique.mockResolvedValue(suppressedLucy);
 
     await isEmailSuppressed("LUCY@YAHOO.COM");
 
     expect(prismaMock.emailSuppression.findUnique).toHaveBeenCalledWith({
-      where: { email: "lucy@yahoo.com" },
+      where: { emailHash: "hash:lucy@yahoo.com" },
     });
   });
 });
 
 describe("suppressEmail", () => {
-  it("creates suppression record with reason", async () => {
+  it("upserts suppression with encrypted email and hash", async () => {
     prismaMock.emailSuppression.upsert.mockResolvedValue(suppressedLucy);
 
     await suppressEmail("lucy@yahoo.com", "hard_bounce");
 
     expect(prismaMock.emailSuppression.upsert).toHaveBeenCalledWith({
-      where: { email: "lucy@yahoo.com" },
+      where: { emailHash: "hash:lucy@yahoo.com" },
       update: { reason: "hard_bounce", suppressedAt: expect.any(Date) },
-      create: { email: "lucy@yahoo.com", reason: "hard_bounce" },
+      create: { email: "encrypted:lucy@yahoo.com", emailHash: "hash:lucy@yahoo.com", reason: "hard_bounce" },
     });
   });
 
-  it("normalizes email to lowercase before storage", async () => {
+  it("normalizes email to lowercase before hashing and encrypting", async () => {
     prismaMock.emailSuppression.upsert.mockResolvedValue(suppressedLucy);
 
     await suppressEmail("LUCY@YAHOO.COM", "complaint");
 
     expect(prismaMock.emailSuppression.upsert).toHaveBeenCalledWith({
-      where: { email: "lucy@yahoo.com" },
+      where: { emailHash: "hash:lucy@yahoo.com" },
       update: { reason: "complaint", suppressedAt: expect.any(Date) },
-      create: { email: "lucy@yahoo.com", reason: "complaint" },
+      create: { email: "encrypted:lucy@yahoo.com", emailHash: "hash:lucy@yahoo.com", reason: "complaint" },
     });
   });
 });
 
 describe("filterSuppressedEmails", () => {
   it("separates suppressed from valid emails", async () => {
-    prismaMock.emailSuppression.findMany.mockResolvedValue([suppressedLucy, suppressedMarcie]);
+    prismaMock.emailSuppression.findMany.mockResolvedValue([
+      { emailHash: "hash:lucy@yahoo.com" } as never,
+      { emailHash: "hash:marcie@gmail.com" } as never,
+    ]);
 
     const result = await filterSuppressedEmails([
       "charlie@test.com",
@@ -71,8 +80,8 @@ describe("filterSuppressedEmails", () => {
     expect(result.suppressed).toEqual(["lucy@yahoo.com", "marcie@gmail.com"]);
   });
 
-  it("handles case-insensitive matching", async () => {
-    prismaMock.emailSuppression.findMany.mockResolvedValue([suppressedLucy]);
+  it("handles case-insensitive matching via blind index", async () => {
+    prismaMock.emailSuppression.findMany.mockResolvedValue([{ emailHash: "hash:lucy@yahoo.com" } as never]);
 
     const result = await filterSuppressedEmails(["LUCY@YAHOO.COM", "charlie@test.com"]);
 
@@ -96,6 +105,17 @@ describe("filterSuppressedEmails", () => {
 
     expect(result.valid).toEqual(["charlie@test.com", "snoopy@test.com"]);
     expect(result.suppressed).toEqual([]);
+  });
+
+  it("queries by emailHash instead of email", async () => {
+    prismaMock.emailSuppression.findMany.mockResolvedValue([]);
+
+    await filterSuppressedEmails(["test@test.com"]);
+
+    expect(prismaMock.emailSuppression.findMany).toHaveBeenCalledWith({
+      where: { emailHash: { in: ["hash:test@test.com"] } },
+      select: { emailHash: true },
+    });
   });
 
   it("throws on database error", async () => {

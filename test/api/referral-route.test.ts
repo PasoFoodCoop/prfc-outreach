@@ -3,6 +3,7 @@ import "../mocks/rate-limit";
 import "../mocks/idempotency";
 import "../mocks/csrf";
 import "../mocks/dal";
+import "../mocks/encryption";
 import {
   prismaMock,
   createMockRequest,
