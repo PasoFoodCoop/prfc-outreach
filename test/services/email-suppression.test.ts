@@ -65,8 +65,8 @@ describe("suppressEmail", () => {
 describe("filterSuppressedEmails", () => {
   it("separates suppressed from valid emails", async () => {
     prismaMock.emailSuppression.findMany.mockResolvedValue([
-      { emailHash: "hash:lucy@yahoo.com" },
-      { emailHash: "hash:marcie@gmail.com" },
+      { emailHash: "hash:lucy@yahoo.com" } as never,
+      { emailHash: "hash:marcie@gmail.com" } as never,
     ]);
 
     const result = await filterSuppressedEmails([
@@ -81,7 +81,7 @@ describe("filterSuppressedEmails", () => {
   });
 
   it("handles case-insensitive matching via blind index", async () => {
-    prismaMock.emailSuppression.findMany.mockResolvedValue([{ emailHash: "hash:lucy@yahoo.com" }]);
+    prismaMock.emailSuppression.findMany.mockResolvedValue([{ emailHash: "hash:lucy@yahoo.com" } as never]);
 
     const result = await filterSuppressedEmails(["LUCY@YAHOO.COM", "charlie@test.com"]);
 
