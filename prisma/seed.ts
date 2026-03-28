@@ -61,6 +61,8 @@ function assertSafeToSeed() {
     process.exit(1);
   }
 
+  if (process.env.ALLOW_REMOTE_SEED === "true") return;
+
   const dbUrl = process.env.DATABASE_URL ?? "";
   if (/prod|production|live/i.test(dbUrl)) {
     console.error("DATABASE_URL appears to reference production");
