@@ -3,14 +3,7 @@ import { z } from "zod";
 const envSchema = z.object({
   DATABASE_URL: z.url(),
 
-  SMTP_HOST: z.string().min(1).optional(),
-  SMTP_PORT: z.coerce.number().default(587),
-  SMTP_SECURE: z
-    .string()
-    .default("false")
-    .transform((v) => v === "true"),
-  SMTP_USER: z.string().min(1).optional(),
-  SMTP_PASS: z.string().min(1).optional(),
+  RESEND_API_KEY: z.string().min(1).optional(),
   FROM_EMAIL: z.email().optional(),
 
   UPSTASH_REDIS_REST_URL: z.url().optional(),
