@@ -1,22 +1,17 @@
-import { vi, type Mocked } from "vitest";
+import { vi, type Mock } from "vitest";
 
-vi.mock("nodemailer", () => {
-  const mockSendMail = vi.fn().mockResolvedValue({ messageId: "mock-msg-7f3a9b2c" });
-  const mockCreateTransport = vi.fn().mockReturnValue({
-    sendMail: mockSendMail,
-  });
+const mockSend = vi.fn().mockResolvedValue({ data: { id: "mock-msg-7f3a9b2c" }, error: null });
+
+vi.mock("resend", () => {
   return {
-    default: {
-      createTransport: mockCreateTransport,
+    Resend: class {
+      emails = { send: mockSend };
     },
-    createTransport: mockCreateTransport,
   };
 });
-
-import nodemailer from "nodemailer";
 
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
-export const emailTransportMock = nodemailer.createTransport() as Mocked<ReturnType<typeof nodemailer.createTransport>>;
+export const resendSendMock: Mock = mockSend;

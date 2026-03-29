@@ -1,41 +1,28 @@
 import "server-only";
-import nodemailer from "nodemailer";
+import fs from "fs";
 import path from "path";
+import { Resend } from "resend";
 import type { Prospect } from "@/schema/referral";
 import { AppError } from "@/utils/errors";
 import { env } from "@/env";
 import { generateUnsubscribeToken } from "@/lib/unsubscribe-tokens";
 import { filterSuppressedEmails } from "./email-suppression";
 
-let _transport: nodemailer.Transporter | null = null;
+let _client: Resend | null = null;
+let _referralImage: string | null = null;
 
-function getTransport(): nodemailer.Transporter {
-  if (_transport) return _transport;
-  _transport = nodemailer.createTransport({
-    host: env.SMTP_HOST,
-    port: env.SMTP_PORT,
-    secure: env.SMTP_SECURE,
-    auth: {
-      user: env.SMTP_USER,
-      pass: env.SMTP_PASS,
-    },
-    pool: true,
-    maxConnections: 5,
-    maxMessages: 100,
-    rateLimit: 10,
-    rateDelta: 1000,
-    socketTimeout: 45000,
-    connectionTimeout: 30000,
-  });
-  return _transport;
+function getClient(): Resend {
+  if (_client) return _client;
+  _client = new Resend(env.RESEND_API_KEY);
+  return _client;
 }
 
-process.on("SIGTERM", () => {
-  if (_transport) {
-    console.log("Closing email transport...");
-    _transport.close();
-  }
-});
+function getReferralImage(): string {
+  if (_referralImage) return _referralImage;
+  const imgPath = path.join(process.cwd(), "public", "assets", "paso-coop.jpeg");
+  _referralImage = fs.readFileSync(imgPath).toString("base64");
+  return _referralImage;
+}
 
 export function validateEmailAllowed(): void {
   if (!env.EMAIL_ENABLED) {
@@ -61,28 +48,20 @@ export async function sendReferralEmails({
   referralCode,
   memberName,
 }: SendReferralEmailParams): Promise<void> {
-  const emailImgPath = path.join(process.cwd(), "public", "assets", "paso-coop.jpeg");
-
   try {
     for (const prospect of prospects) {
       const originalSubject = "You've Been Invited!";
       const { to, subject } = applyRedirect(prospect.prospectEmail, originalSubject);
 
-      const mail = {
-        from: env.FROM_EMAIL,
+      const { error } = await getClient().emails.send({
+        from: env.FROM_EMAIL ?? "noreply@example.com",
         to,
         subject,
         html: generateEmailHtml(prospect.prospectName, memberName, referralCode),
-        attachments: [
-          {
-            filename: "paso-coop.jpeg",
-            path: emailImgPath,
-            cid: "pasoLogo",
-          },
-        ],
-      };
+        attachments: [{ filename: "paso-coop.jpeg", content: getReferralImage(), contentId: "pasoLogo" }],
+      });
 
-      await getTransport().sendMail(mail);
+      if (error) throw new Error(error.message);
     }
   } catch (error) {
     throw new AppError("EMAIL_ERROR", "Failed to send referral emails", {
@@ -171,20 +150,19 @@ export async function sendGroupEmails(
 
         const { to, subject: redirectedSubject } = applyRedirect(recipient.email, subject);
 
-        await getTransport().sendMail({
-          from: `${senderName} <${env.FROM_EMAIL}>`,
+        const { error } = await getClient().emails.send({
+          from: `${senderName} <${env.FROM_EMAIL ?? ""}>`,
           to,
           replyTo,
           subject: redirectedSubject,
           html: htmlWithFooter,
           headers: {
+            "List-Unsubscribe": `<${unsubscribeUrl}>`,
             "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-            "List-Unsubscribe": {
-              prepared: true,
-              value: `<${unsubscribeUrl}>`,
-            },
           },
         });
+
+        if (error) throw new Error(error.message);
       }),
     );
 
