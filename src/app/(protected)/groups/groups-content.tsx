@@ -26,6 +26,8 @@ export function GroupsContent({ groups, isAdmin, ownerId }: GroupsContentProps) 
     closeModal,
     handleCardClick,
     handleEdit,
+    handleQuickEdit,
+    handleQuickDelete,
     handleSave,
     handleDelete,
     handleConfirmDelete,
@@ -58,8 +60,9 @@ export function GroupsContent({ groups, isAdmin, ownerId }: GroupsContentProps) 
                 variant="group"
                 name={group.name}
                 memberCount={group.memberCount}
-                description={group.description}
-                onClick={() => handleCardClick(group.id)}
+                onViewGroup={() => handleCardClick(group.id)}
+                onQuickEdit={() => handleQuickEdit(group.id)}
+                onDelete={() => handleQuickDelete(group.id)}
               />
               {loadingGroupId === group.id ? (
                 <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-white/60">
