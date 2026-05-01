@@ -4,6 +4,7 @@ import { timingSafeEqual } from "crypto";
 
 const AUTH_COOKIE = "prfc_auth";
 const PROTECTED_PATHS = ["/home", "/groups", "/events", "/messages", "/settings", "/profile", "/referral-database"];
+const PUBLIC_PATHS = ["/privacy", "/terms", "/unauthorized", "/forbidden"];
 
 function isBasicAuthValid(request: NextRequest): boolean {
   const authHeader = request.headers.get("authorization");
@@ -29,7 +30,10 @@ function isBasicAuthValid(request: NextRequest): boolean {
 }
 
 export async function proxy(request: NextRequest) {
-  if (process.env.STAGING === "true") {
+  const { pathname } = request.nextUrl;
+  const isPublicPath = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
+
+  if (process.env.STAGING === "true" && !isPublicPath) {
     if (!isBasicAuthValid(request)) {
       return new NextResponse("Authentication required", {
         status: 401,
@@ -37,8 +41,6 @@ export async function proxy(request: NextRequest) {
       });
     }
   }
-
-  const { pathname } = request.nextUrl;
   const isProtectedPath = PROTECTED_PATHS.some((p) => pathname.startsWith(p));
 
   if (isProtectedPath) {
