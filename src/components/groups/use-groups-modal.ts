@@ -161,8 +161,9 @@ export function useGroupsModal(ownerId: number, initialCreate: boolean = false) 
         }));
 
         setModal({ type: "addMembers", group: currentGroup, memberRows });
-      } catch {
-        toast.error("Failed to load members");
+      } catch (error) {
+        console.error("[GROUPS_FETCH_ERROR]", error);
+        toast.error(handleActionError(error instanceof Error ? error.message : undefined, "Failed to load members"));
       }
     });
   }, [modal, ownerId]);
