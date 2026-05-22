@@ -196,6 +196,7 @@ describe("POST /api/auth/callback", () => {
 
     expect(response.status).toBe(429);
     expect(cookie).toBeUndefined();
+    expect(mockAuthLimit).toHaveBeenCalledWith("127.0.0.1");
   });
 });
 

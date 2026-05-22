@@ -25,7 +25,7 @@ const defaultParams = {
 describe("sendGroupEmails", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockBrevoSend.mockResolvedValue("mock-id");
+    mockBrevoSend.mockResolvedValue({ messageId: "mock-id", remaining: null });
   });
 
   it("sends to all valid recipients", async () => {
