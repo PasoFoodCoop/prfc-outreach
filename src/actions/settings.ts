@@ -52,8 +52,7 @@ export async function uploadPhotoAction(formData: FormData): Promise<ActionResul
       return { success: false, error: "File must be under 2MB" };
     }
     const url = await uploadProfilePhoto(session.ownerid, file);
-    revalidatePath("/profile");
-    revalidatePath("/settings");
+    revalidatePath("/", "layout");
     return { success: true, data: { url } };
   } catch (error) {
     const appError = transformError(error);
@@ -65,8 +64,7 @@ export async function deletePhotoAction(): Promise<ActionResult> {
   try {
     const session = await verifySession();
     await deleteProfilePhoto(session.ownerid);
-    revalidatePath("/profile");
-    revalidatePath("/settings");
+    revalidatePath("/", "layout");
     return { success: true };
   } catch (error) {
     const appError = transformError(error);

@@ -92,7 +92,7 @@ async function sendEmailsForMessage(
           where: { messageId, channel: "email", memberId: r.memberId },
           data: {
             status: r.status,
-            sentAt: now,
+            sentAt: r.status === "sent" ? now : null,
             externalId: r.externalId ?? null,
             error: r.error ?? null,
           },

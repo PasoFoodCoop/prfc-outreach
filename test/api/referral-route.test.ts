@@ -1,6 +1,7 @@
 import "../mocks/email";
 import "../mocks/email-suppression";
 import "../mocks/unsubscribe-tokens";
+import "../mocks/email-quota";
 import "../mocks/rate-limit";
 import "../mocks/idempotency";
 import "../mocks/csrf";
@@ -10,6 +11,7 @@ import { mockPrisma } from "../mocks/prisma";
 import { createMockRequest } from "../mocks/request";
 import { allReferrals, formWithTwoProspects, referralCharlie } from "../mocks/referrals";
 import { mockBrevoSend } from "../mocks/email";
+import { mockReserveEmailQuota } from "../mocks/email-quota";
 import { mockRateLimiter } from "../mocks/rate-limit";
 import { mockGetIdempotentResponse } from "../mocks/idempotency";
 import { mockValidateOrigin } from "../mocks/csrf";
@@ -91,14 +93,17 @@ describe("POST /api/referrals", () => {
     expect(response.status).toBe(400);
   });
 
-  it("returns 500 when email fails", async () => {
+  it("creates referrals even when email send fails", async () => {
     mockBrevoSend.mockRejectedValueOnce(new Error("Send failed"));
+    const createdReferrals = [{ ...referralCharlie, id: 11 }];
+    mockPrisma.$transaction.mockResolvedValue(createdReferrals);
+
     const req = createMockRequest({ body: formWithTwoProspects });
 
     const response = await POST(req);
 
     expect(response.status).toBe(500);
-    expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+    expect(mockPrisma.$transaction).toHaveBeenCalled();
   });
 
   it("returns 429 when rate limited", async () => {
@@ -145,5 +150,22 @@ describe("POST /api/referrals", () => {
     expect(data.referrals).toHaveLength(1);
     expect(mockBrevoSend).not.toHaveBeenCalled();
     expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("creates referrals even when email quota is exhausted", async () => {
+    mockReserveEmailQuota.mockResolvedValue({ allowed: 0, total: 300 });
+    const createdReferrals = [
+      { ...referralCharlie, id: 9 },
+      { ...referralCharlie, id: 10, prospectName: "Marcie Johnson", prospectEmail: "marcie.johnson@yahoo.com" },
+    ];
+    mockPrisma.$transaction.mockResolvedValue(createdReferrals);
+
+    const req = createMockRequest({ body: formWithTwoProspects });
+    const response = await POST(req);
+    const data = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(data.referrals).toHaveLength(2);
+    expect(mockBrevoSend).not.toHaveBeenCalled();
   });
 });

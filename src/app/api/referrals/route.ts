@@ -48,10 +48,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { memberName, memberEmail, referralCode, prospects } = ReferralFormSchema.parse(body);
 
-    if (env.EMAIL_ENABLED) {
-      await sendReferralEmails({ prospects, referralCode, memberName });
-    }
-
     const referrals = prospects.map((prospect) => ({
       memberName,
       memberEmail,
@@ -62,6 +58,10 @@ export async function POST(req: NextRequest) {
     }));
 
     const newReferrals = await createManyReferrals(referrals);
+
+    if (env.EMAIL_ENABLED) {
+      await sendReferralEmails({ prospects, referralCode, memberName });
+    }
 
     const responseBody = { message: "Referrals created successfully!", referrals: newReferrals };
 

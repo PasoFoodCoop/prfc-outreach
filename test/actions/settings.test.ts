@@ -64,7 +64,7 @@ describe("uploadPhotoAction", () => {
       data: { url: "https://abc.public.blob.vercel-storage.com/avatars/100001.jpg" },
     });
     expect(mockUploadProfilePhoto).toHaveBeenCalledWith(100001, file);
-    expect(mockRevalidatePath).toHaveBeenCalledWith("/settings");
+    expect(mockRevalidatePath).toHaveBeenCalledWith("/", "layout");
   });
 
   it("returns error when no file is in the FormData", async () => {

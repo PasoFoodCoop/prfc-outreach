@@ -33,7 +33,10 @@ function RecipientLabel({ message }: { message: { isBlast: boolean; groupNames: 
   if (message.groupNames.length <= 2) return <>{message.groupNames.join(", ")}</>;
   return (
     <>
-      {message.groupNames.slice(0, 2).join(", ")} +{message.groupNames.length - 2} more
+      {message.groupNames.slice(0, 2).join(", ")}{" "}
+      <span className="inline-flex items-center rounded-full bg-paso-light-brown px-2 py-0.5 text-xs font-semibold text-prfc-brown">
+        +{message.groupNames.length - 2}
+      </span>
     </>
   );
 }

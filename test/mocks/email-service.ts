@@ -3,7 +3,7 @@ import { vi } from "vitest";
 vi.mock("@/services/email", () => ({
   validateEmailAllowed: vi.fn(),
   getDailyEmailCount: vi.fn().mockResolvedValue(0),
-  sendReferralEmails: vi.fn().mockResolvedValue(undefined),
+  sendReferralEmails: vi.fn().mockResolvedValue({ sent: 0, skipped: 0 }),
   sendGroupEmails: vi.fn().mockResolvedValue({ sent: 0, failed: 0, suppressed: 0, results: [] }),
 }));
 

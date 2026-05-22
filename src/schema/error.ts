@@ -17,6 +17,7 @@ export const ErrorCodeSchema = z.enum([
   "SMS_CONSENT_REQUIRED",
   "MESSAGE_SEND_FAILED",
   "BLAST_NOT_AUTHORIZED",
+  "QUOTA_EXCEEDED",
 ]);
 
 export type ErrorCode = z.infer<typeof ErrorCodeSchema>;

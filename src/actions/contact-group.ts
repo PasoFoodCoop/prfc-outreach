@@ -35,6 +35,7 @@ import { z } from "zod";
 import { MessageHistoryQuerySchema } from "@/schema/message";
 import { PositiveIntSchema } from "@/schema/common";
 import { getMemberById } from "@/lib/api/member-api";
+import { messageSendLimiter } from "@/lib/rate-limit";
 import { transformError } from "@/utils/errors";
 import type { ActionResult } from "@/types/action";
 import type { MessageHistoryQueryInput } from "@/schema/message";
@@ -266,6 +267,14 @@ export async function sendMessage(input: {
 }): Promise<ActionResult<MessageResult>> {
   try {
     const session = await verifySession();
+
+    if (messageSendLimiter) {
+      const { success } = await messageSendLimiter.limit(String(session.ownerid));
+      if (!success) {
+        return { success: false, error: "Too many messages. Please wait before sending again." };
+      }
+    }
+
     const validated = ComposeMessageSchema.parse(input);
 
     if (!session.isAdmin) {
@@ -294,6 +303,14 @@ export async function sendBlast(input: {
 }): Promise<ActionResult<MessageResult>> {
   try {
     const session = await verifySession();
+
+    if (messageSendLimiter) {
+      const { success } = await messageSendLimiter.limit(String(session.ownerid));
+      if (!success) {
+        return { success: false, error: "Too many messages. Please wait before sending again." };
+      }
+    }
+
     const validated = BlastMessageSchema.parse(input);
 
     if (!session.isAdmin) {

@@ -14,6 +14,7 @@ import {
   updateMemberNotifications,
   getGroupMembers,
   getGroupRecipients,
+  getGroupsWithMemberIdsByOwner,
 } from "@/services/contact-group";
 
 describe("getGroupsByOwner", () => {
@@ -42,6 +43,24 @@ describe("getGroupsByOwner", () => {
     await expect(getGroupsByOwner(100)).rejects.toMatchObject({
       code: "INTERNAL_ERROR",
     });
+  });
+});
+
+describe("getGroupsWithMemberIdsByOwner", () => {
+  it("returns groups with member IDs filtered by owner", async () => {
+    const mockGroups = [
+      { ...groupAlpha, _count: { members: 2 }, members: [{ memberId: 100001 }, { memberId: 100002 }] },
+    ];
+    mockPrisma.contactGroup.findMany.mockResolvedValue(mockGroups as never);
+
+    const result = await getGroupsWithMemberIdsByOwner(100001);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].memberIds).toEqual([100001, 100002]);
+    expect(result[0].memberCount).toBe(2);
+    expect(mockPrisma.contactGroup.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { ownerid: 100001 } }),
+    );
   });
 });
 

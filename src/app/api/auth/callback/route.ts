@@ -1,12 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { AUTH_COOKIE, validateToken, getSecret } from "@/lib/dal";
+import { authRateLimiter } from "@/lib/rate-limit";
 
 const AuthCallbackSchema = z.object({
   token: z.string().min(1),
 });
 
 export async function POST(req: NextRequest) {
+  if (authRateLimiter) {
+    const forwarded = req.headers.get("x-forwarded-for");
+    const ip = forwarded?.split(",")[0]?.trim() ?? "127.0.0.1";
+    const { success } = await authRateLimiter.limit(ip);
+
+    if (!success) {
+      return new NextResponse("Too many login attempts", { status: 429 });
+    }
+  }
+
   let secret: string;
   try {
     secret = getSecret();

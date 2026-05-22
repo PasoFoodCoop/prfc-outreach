@@ -56,7 +56,7 @@ export interface EmailRecipient {
 
 export interface RecipientSendResult {
   memberId: number;
-  status: "sent" | "failed";
+  status: "sent" | "failed" | "queued";
   externalId?: string;
   error?: string;
 }
