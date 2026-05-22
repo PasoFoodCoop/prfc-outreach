@@ -29,6 +29,7 @@ interface CreateGroupModalProps {
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: { name: string; description: string | null; memberIds: number[] }) => void;
   members: MemberOption[];
+  ownerId: number;
   isSubmitting?: boolean;
 }
 
@@ -37,13 +38,14 @@ export function CreateGroupModal({
   onOpenChange,
   onSubmit,
   members,
+  ownerId,
   isSubmitting = false,
 }: CreateGroupModalProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [error, setError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set([ownerId]));
   const nameRef = useRef<HTMLInputElement>(null);
 
   const filteredMembers = useFuzzySearch(members, { keys: ["ownername"] }, searchQuery);
@@ -69,12 +71,13 @@ export function CreateGroupModal({
       setDescription("");
       setError("");
       setSearchQuery("");
-      setSelectedIds(new Set());
+      setSelectedIds(new Set([ownerId]));
     }
     onOpenChange(nextOpen);
   };
 
   const toggleMember = (memberId: number) => {
+    if (memberId === ownerId) return;
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(memberId)) next.delete(memberId);
@@ -89,7 +92,9 @@ export function CreateGroupModal({
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (allSelected) {
-        for (const id of allFilteredIds) next.delete(id);
+        for (const id of allFilteredIds) {
+          if (id !== ownerId) next.delete(id);
+        }
       } else {
         for (const id of allFilteredIds) next.add(id);
       }
@@ -192,6 +197,7 @@ export function CreateGroupModal({
                           <Checkbox
                             checked={selectedIds.has(member.memberId)}
                             onCheckedChange={() => toggleMember(member.memberId)}
+                            disabled={member.memberId === ownerId}
                             aria-label={`Select ${member.ownername}`}
                           />
                         </label>

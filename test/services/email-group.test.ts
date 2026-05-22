@@ -25,7 +25,7 @@ const defaultParams = {
 describe("sendGroupEmails", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockBrevoSend.mockResolvedValue("mock-id");
+    mockBrevoSend.mockResolvedValue({ messageId: "mock-id", remaining: null });
   });
 
   it("sends to all valid recipients", async () => {
@@ -112,6 +112,30 @@ describe("sendGroupEmails", () => {
       expect(html).toContain("P.O. Box 922, Paso Robles, CA 93447");
       expect(html).toMatch(/<a href="[^"]*\/api\/unsubscribe\?token=[^"]*"[^>]*>Unsubscribe<\/a>/);
     }
+  });
+
+  it("wraps body in table-based HTML email template", async () => {
+    const recipients = [recipientBobby];
+    mockFilterSuppressedEmails.mockResolvedValue({ valid: [recipientBobby.email], suppressed: [] });
+
+    await sendGroupEmails({ ...defaultParams, recipients });
+
+    const html = String(mockBrevoSend.mock.calls[0][0].htmlContent ?? "");
+    expect(html).toContain('role="presentation"');
+    expect(html).toContain("background-color: #ffffff");
+    expect(html).toContain("max-width: 600px");
+  });
+
+  it("includes textContent plain text fallback", async () => {
+    const recipients = [recipientBobby];
+    mockFilterSuppressedEmails.mockResolvedValue({ valid: [recipientBobby.email], suppressed: [] });
+
+    await sendGroupEmails({ ...defaultParams, recipients });
+
+    const textContent = mockBrevoSend.mock.calls[0][0].textContent;
+    expect(textContent).toBeDefined();
+    expect(textContent).toContain("Paso Robles Food Cooperative");
+    expect(textContent).toContain("Unsubscribe");
   });
 
   describe("batching", () => {
@@ -216,5 +240,73 @@ describe("sendGroupEmails", () => {
     expect(sent).toBe(0);
     expect(failed).toBe(0);
     expect(suppressed).toBe(2);
+  });
+
+  describe("quota exhaustion", () => {
+    it("marks recipients as queued when QUOTA_EXCEEDED", async () => {
+      const { AppError } = await import("@/utils/errors");
+      const recipients = [recipientBobby, recipientLucy];
+      mockFilterSuppressedEmails.mockResolvedValue({ valid: recipients.map((r) => r.email), suppressed: [] });
+      mockBrevoSend
+        .mockResolvedValueOnce({ messageId: "ok-1", remaining: 0 })
+        .mockRejectedValueOnce(new AppError("QUOTA_EXCEEDED", "Daily limit reached"));
+
+      const { sent, failed, results } = await sendGroupEmails({ ...defaultParams, recipients });
+
+      expect(sent).toBe(1);
+      expect(failed).toBe(0);
+      expect(results.find((r) => r.memberId === recipientBobby.memberId)?.status).toBe("sent");
+      expect(results.find((r) => r.memberId === recipientLucy.memberId)?.status).toBe("queued");
+    });
+
+    it("breaks loop and queues remaining batches on QUOTA_EXCEEDED", async () => {
+      const { AppError } = await import("@/utils/errors");
+      mockFilterSuppressedEmails.mockResolvedValue({
+        valid: allRecipients.map((r) => r.email),
+        suppressed: [],
+      });
+
+      for (let i = 0; i < 10; i++) {
+        mockBrevoSend.mockResolvedValueOnce({ messageId: `ok-${i}`, remaining: 290 - i });
+      }
+      mockBrevoSend.mockRejectedValue(new AppError("QUOTA_EXCEEDED", "Daily limit reached"));
+
+      const { sent, failed, results } = await sendGroupEmails({ ...defaultParams, recipients: allRecipients });
+
+      expect(sent).toBe(10);
+      expect(failed).toBe(0);
+      const queuedCount = results.filter((r) => r.status === "queued").length;
+      expect(queuedCount).toBe(allRecipients.length - 10);
+      expect(mockBrevoSend).toHaveBeenCalledTimes(12);
+    });
+
+    it("still marks non-quota errors as failed", async () => {
+      const recipients = [recipientBobby];
+      mockFilterSuppressedEmails.mockResolvedValue({ valid: [recipientBobby.email], suppressed: [] });
+      mockBrevoSend.mockRejectedValueOnce(new Error("Connection timeout"));
+
+      const { sent, failed, results } = await sendGroupEmails({ ...defaultParams, recipients });
+
+      expect(sent).toBe(0);
+      expect(failed).toBe(1);
+      expect(results[0].status).toBe("failed");
+    });
+
+    it("handles mix of success and QUOTA_EXCEEDED in same batch", async () => {
+      const { AppError } = await import("@/utils/errors");
+      const recipients = [recipientBobby, recipientLucy, recipientMarcie];
+      mockFilterSuppressedEmails.mockResolvedValue({ valid: recipients.map((r) => r.email), suppressed: [] });
+      mockBrevoSend
+        .mockResolvedValueOnce({ messageId: "ok-1", remaining: 1 })
+        .mockResolvedValueOnce({ messageId: "ok-2", remaining: 0 })
+        .mockRejectedValueOnce(new AppError("QUOTA_EXCEEDED", "Daily limit reached"));
+
+      const { sent, failed, results } = await sendGroupEmails({ ...defaultParams, recipients });
+
+      expect(sent).toBe(2);
+      expect(failed).toBe(0);
+      const queued = results.filter((r) => r.status === "queued");
+      expect(queued.length).toBe(1);
+    });
   });
 });

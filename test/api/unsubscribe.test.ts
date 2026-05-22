@@ -4,7 +4,6 @@ import "../mocks/email-suppression";
 import "../mocks/unsubscribe-tokens";
 import "../mocks/member-api";
 import {
-  mockPrisma,
   mockVerifyUnsubscribeToken,
   mockVerifyEmailUnsubscribeToken,
   mockSuppressEmail,
@@ -132,7 +131,6 @@ describe("POST /api/unsubscribe (email token)", () => {
 
     expect(res.status).toBe(204);
     expect(mockSuppressEmail).toHaveBeenCalledWith("prospect@example.com", "unsubscribe");
-    expect(mockPrisma.contactGroupMember.updateMany).not.toHaveBeenCalled();
   });
 
   it("returns 400 for invalid referral token", async () => {

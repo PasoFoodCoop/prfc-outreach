@@ -91,7 +91,7 @@ export function ViewMessageModal({ open, onOpenChange, message, recipients }: Vi
                 </Avatar>
               ))}
               {overflowCount > 0 && (
-                <div className="h-8 w-8 rounded-full bg-blue-100 border-2 border-background flex items-center justify-center text-xs font-semibold text-prfc-blue">
+                <div className="h-8 w-8 rounded-full bg-paso-light-brown border-2 border-background flex items-center justify-center text-xs font-semibold text-prfc-brown">
                   +{overflowCount}
                 </div>
               )}

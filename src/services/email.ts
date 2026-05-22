@@ -243,7 +243,7 @@ export async function sendGroupEmails(
 
         const { to, subject: redirectedSubject } = applyRedirect(recipient.email, subject);
 
-        const messageId = await sendBrevoEmail({
+        const result = await sendBrevoEmail({
           sender: { name: senderName, email: env.FROM_EMAIL ?? "" },
           to: [{ email: to }],
           replyTo: { email: replyTo },
@@ -256,10 +256,11 @@ export async function sendGroupEmails(
           },
         });
 
-        return { memberId: recipient.memberId, externalId: messageId };
+        return { memberId: recipient.memberId, externalId: result.messageId };
       }),
     );
 
+    let quotaExhausted = false;
     for (let j = 0; j < results.length; j++) {
       const result = results[j];
       const recipient = batch[j];
@@ -267,11 +268,25 @@ export async function sendGroupEmails(
         sent++;
         recipientResults.push({ memberId: recipient.memberId, status: "sent", externalId: result.value.externalId });
       } else {
-        failed++;
-        const errorMsg = result.reason instanceof Error ? result.reason.message : "Unknown error";
-        console.error("[EMAIL_SEND_ERROR]", result.reason);
-        recipientResults.push({ memberId: recipient.memberId, status: "failed", error: errorMsg });
+        const isQuotaError = result.reason instanceof AppError && result.reason.code === "QUOTA_EXCEEDED";
+        if (isQuotaError) {
+          quotaExhausted = true;
+          recipientResults.push({ memberId: recipient.memberId, status: "queued" });
+        } else {
+          failed++;
+          const errorMsg = result.reason instanceof Error ? result.reason.message : "Unknown error";
+          console.error("[EMAIL_SEND_ERROR]", result.reason);
+          recipientResults.push({ memberId: recipient.memberId, status: "failed", error: errorMsg });
+        }
       }
+    }
+
+    if (quotaExhausted) {
+      const remainingRecipients = validRecipients.slice(i + BATCH_SIZE);
+      for (const r of remainingRecipients) {
+        recipientResults.push({ memberId: r.memberId, status: "queued" });
+      }
+      break;
     }
 
     if (i + BATCH_SIZE < validRecipients.length) {

@@ -33,6 +33,7 @@ export const errorStatusMap: Record<ErrorCode, number> = {
   SMS_CONSENT_REQUIRED: 403,
   MESSAGE_SEND_FAILED: 500,
   BLAST_NOT_AUTHORIZED: 403,
+  QUOTA_EXCEEDED: 429,
 };
 
 export function transformError(error: unknown): AppError {

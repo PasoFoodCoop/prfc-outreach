@@ -1,6 +1,6 @@
 import { vi, type Mock } from "vitest";
 
-const mockSendBrevo = vi.fn().mockResolvedValue("mock-msg-7f3a9b2c");
+const mockSendBrevo = vi.fn().mockResolvedValue({ messageId: "mock-msg-7f3a9b2c", remaining: null });
 
 vi.mock("@/lib/brevo", () => ({
   sendBrevoEmail: mockSendBrevo,

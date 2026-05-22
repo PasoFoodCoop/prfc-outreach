@@ -21,6 +21,14 @@ vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
 }));
 
+const { mockAuthLimit } = vi.hoisted(() => ({
+  mockAuthLimit: vi.fn().mockResolvedValue({ success: true, remaining: 4, reset: Date.now() + 60000 }),
+}));
+
+vi.mock("@/lib/rate-limit", () => ({
+  authRateLimiter: { limit: mockAuthLimit },
+}));
+
 // Make React cache() a passthrough so tests get fresh results
 vi.mock("react", async () => {
   const actual = await vi.importActual("react");
@@ -169,6 +177,26 @@ describe("POST /api/auth/callback", () => {
 
     expect(response.status).toBe(307);
     expect(cookie).toBeUndefined();
+  });
+
+  it("returns 429 when rate limited", async () => {
+    mockAuthLimit.mockResolvedValueOnce({ success: false, remaining: 0, reset: Date.now() + 60000 });
+
+    const token = generateToken(100001, true);
+    const formData = new FormData();
+    formData.set("token", token);
+
+    const request = new NextRequest("http://localhost:3000/api/auth/callback", {
+      method: "POST",
+      body: formData,
+    });
+
+    const response = await callbackPOST(request);
+    const cookie = response.cookies.get(AUTH_COOKIE);
+
+    expect(response.status).toBe(429);
+    expect(cookie).toBeUndefined();
+    expect(mockAuthLimit).toHaveBeenCalledWith("127.0.0.1");
   });
 });
 

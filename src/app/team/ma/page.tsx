@@ -29,6 +29,7 @@ export default function MaPage() {
           setDefaultOpen(false);
         }}
         members={MOCK_MEMBERS}
+        ownerId={1}
       />
 
       <CreateGroupModal
@@ -36,6 +37,7 @@ export default function MaPage() {
         onOpenChange={setSubmittingOpen}
         onSubmit={() => {}}
         members={MOCK_MEMBERS}
+        ownerId={1}
         isSubmitting
       />
     </div>

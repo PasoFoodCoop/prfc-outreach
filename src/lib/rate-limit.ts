@@ -29,3 +29,7 @@ export function createRateLimiter(config: RateLimitConfig) {
 export const rateLimiter = createRateLimiter({ prefix: "prfc:referral", limit: 5, window: "60 s" });
 
 export const membersRateLimiter = createRateLimiter({ prefix: "prfc:members", limit: 10, window: "60 s" });
+
+export const authRateLimiter = createRateLimiter({ prefix: "prfc:auth", limit: 5, window: "60 s" });
+
+export const messageSendLimiter = createRateLimiter({ prefix: "prfc:message-send", limit: 5, window: "60 s" });

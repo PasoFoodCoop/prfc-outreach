@@ -2,7 +2,7 @@ export * from "./referrals";
 export { mockPrisma } from "./prisma";
 export { createMockRequest } from "./request";
 export { mockBrevoSend } from "./email";
-export { mockRateLimiter, mockMembersRateLimiter } from "./rate-limit";
+export { mockRateLimiter, mockMembersRateLimiter, mockMessageSendLimiter } from "./rate-limit";
 export { mockGetIdempotentResponse, mockSetIdempotentResponse } from "./idempotency";
 export { mockValidateOrigin } from "./csrf";
 export { mockVerifySession, mockRequireAdmin } from "./dal";

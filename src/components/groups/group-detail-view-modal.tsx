@@ -107,7 +107,7 @@ export function GroupDetailViewModal({ open, onOpenChange, group, onEdit }: Grou
               ))}
               {group.memberCount > 8 ? (
                 <div
-                  className="bg-slate-300 h-8 w-8 rounded-full font-bold text-sm flex justify-center items-center"
+                  className="bg-paso-light-brown h-8 w-8 rounded-full font-semibold text-xs flex justify-center items-center text-prfc-brown"
                   role="img"
                   aria-label={`${group.memberCount - 8} more members`}
                 >

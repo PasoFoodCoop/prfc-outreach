@@ -164,6 +164,7 @@ export function GroupsContent({ myGroups, allGroups, isAdmin, ownerId, members }
         }}
         onSubmit={handleCreateSubmit}
         members={members.map((m) => ({ memberId: m.ownerid, ownername: m.ownername }))}
+        ownerId={ownerId}
         isSubmitting={modal.type === "create" && isPending}
       />
 
