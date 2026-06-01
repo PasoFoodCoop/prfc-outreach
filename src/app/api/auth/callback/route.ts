@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 import { AUTH_COOKIE, validateToken, getSecret } from "@/lib/dal";
 import { authRateLimiter } from "@/lib/rate-limit";
-
-const AuthCallbackSchema = z.object({
-  token: z.string().min(1),
-});
+import { AuthCallbackSchema } from "@/schema/auth";
 
 export async function POST(req: NextRequest) {
   const rawIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "127.0.0.1";
@@ -30,7 +26,7 @@ export async function POST(req: NextRequest) {
   const parsed = AuthCallbackSchema.safeParse({ token: formData.get("token") });
 
   if (!parsed.success) {
-    console.error("[AUTH_CALLBACK] missing or malformed token", ip);
+    console.warn("[AUTH_CALLBACK] missing or malformed token", ip);
     return NextResponse.redirect(new URL("/home", req.url));
   }
 
@@ -38,11 +34,11 @@ export async function POST(req: NextRequest) {
 
   const session = validateToken(token, secret);
   if (!session) {
-    console.error("[AUTH_CALLBACK] invalid or expired token", ip);
+    console.warn("[AUTH_CALLBACK] invalid or expired token", ip);
     return NextResponse.redirect(new URL("/home", req.url));
   }
 
-  console.error("[AUTH_CALLBACK] login success", session.ownerid, ip);
+  console.info("[AUTH_CALLBACK] login success", session.ownerid, ip);
 
   const response = NextResponse.redirect(new URL("/home", req.url));
 

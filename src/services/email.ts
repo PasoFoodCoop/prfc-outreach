@@ -19,13 +19,6 @@ export function validateEmailAllowed(): void {
   }
 }
 
-function applyRedirect(to: string, subject: string): { to: string; subject: string } {
-  if (env.EMAIL_REDIRECT_TO) {
-    return { to: env.EMAIL_REDIRECT_TO, subject: `[TEST to: ${to}] ${subject}` };
-  }
-  return { to, subject };
-}
-
 export async function getDailyEmailCount(): Promise<number> {
   const todayStart = new Date();
   todayStart.setUTCHours(0, 0, 0, 0);
@@ -65,22 +58,22 @@ export async function sendReferralEmails({
         continue;
       }
 
-      const originalSubject = "You've Been Invited!";
-      const { to, subject } = applyRedirect(prospect.prospectEmail, originalSubject);
+      const subject = "You've Been Invited!";
       const unsubscribeToken = generateEmailUnsubscribeToken(prospect.prospectEmail);
-      const unsubscribeUrl = `${env.APP_URL}/api/unsubscribe?token=${unsubscribeToken}`;
+      const unsubscribeUrl = `${env.APP_URL}/unsubscribe?token=${unsubscribeToken}`;
+      const unsubscribeApiUrl = `${env.APP_URL}/api/unsubscribe?token=${unsubscribeToken}`;
 
       const joinUrl = `https://www.pasofoodcooperative.com/join-now1.html?enterReferral=${referralCode}`;
       const textContent = `Hi ${prospect.prospectName},\n\n${memberName} thinks you'd be a great fit for the Paso Robles Food Co-op. We are a member-owned grocery cooperative in Paso Robles, and each new member gets a vote in how we run the store.\n\nMembers shop at the Co-op, attend monthly meetings on the 4th Wednesday at 6 pm, and help choose which local farms and producers we carry. Annual membership is $25.\n\nUse referral code ${referralCode} when you register: ${joinUrl}\n\nQuestions? Reach us at info@pasofoodcooperative.com or visit pasofoodcooperative.com.\n\n---\nThis email was sent on behalf of a Co-op member who thought you might be interested.\nPaso Robles Food Cooperative, Inc. P.O. Box 922, Paso Robles, CA 93447\nUnsubscribe: ${unsubscribeUrl}`;
 
       await sendBrevoEmail({
         sender: { name: "Paso Robles Food Co-op", email: env.FROM_EMAIL ?? "noreply@example.com" },
-        to: [{ email: to }],
+        to: [{ email: prospect.prospectEmail }],
         subject,
         htmlContent: generateReferralEmailHtml(prospect.prospectName, memberName, referralCode, unsubscribeUrl),
         textContent,
         headers: {
-          "List-Unsubscribe": `<${unsubscribeUrl}>`,
+          "List-Unsubscribe": `<${unsubscribeApiUrl}>`,
           "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
         },
       });
@@ -231,7 +224,8 @@ export async function sendGroupEmails(
     const results = await Promise.allSettled(
       batch.map(async (recipient) => {
         const token = generateEmailUnsubscribeToken(recipient.email);
-        const unsubscribeUrl = `${env.APP_URL}/api/unsubscribe?token=${token}`;
+        const unsubscribeUrl = `${env.APP_URL}/unsubscribe?token=${token}`;
+        const unsubscribeApiUrl = `${env.APP_URL}/api/unsubscribe?token=${token}`;
 
         const footerHtml = `<strong>Paso Robles Food Cooperative, Inc.</strong><br>
             P.O. Box 922, Paso Robles, CA 93447<br>
@@ -241,17 +235,15 @@ export async function sendGroupEmails(
 
         const textContent = `${plainBody}\n\n---\nPaso Robles Food Cooperative, Inc.\nP.O. Box 922, Paso Robles, CA 93447\nUnsubscribe: ${unsubscribeUrl}`;
 
-        const { to, subject: redirectedSubject } = applyRedirect(recipient.email, subject);
-
         const result = await sendBrevoEmail({
           sender: { name: senderName, email: env.FROM_EMAIL ?? "" },
-          to: [{ email: to }],
+          to: [{ email: recipient.email }],
           replyTo: { email: replyTo },
-          subject: redirectedSubject,
+          subject,
           htmlContent,
           textContent,
           headers: {
-            "List-Unsubscribe": `<${unsubscribeUrl}>`,
+            "List-Unsubscribe": `<${unsubscribeApiUrl}>`,
             "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
           },
         });

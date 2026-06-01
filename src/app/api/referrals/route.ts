@@ -6,15 +6,14 @@ import { env } from "@/env";
 import { rateLimiter } from "@/lib/rate-limit";
 import { claimIdempotencyKey, setIdempotentResponse } from "@/lib/idempotency";
 import { validateOrigin } from "@/lib/csrf";
-import { verifySession, requireAdmin } from "@/lib/dal";
+import { requireAdmin } from "@/lib/dal";
+import { verifyReferralSignature } from "@/lib/referral-signature";
 import { apiErrorHandler, transformError, errorStatusMap } from "@/utils/errors";
 
 export async function POST(req: NextRequest) {
   const idempotencyKey = req.headers.get("idempotency-key");
 
   try {
-    await verifySession();
-
     if (!validateOrigin(req)) {
       return NextResponse.json({ error: { code: "FORBIDDEN", message: "Invalid origin" } }, { status: 403 });
     }
@@ -46,7 +45,14 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { memberName, memberEmail, referralCode, prospects } = ReferralFormSchema.parse(body);
+    const { memberName, memberEmail, referralCode, signature, prospects } = ReferralFormSchema.parse(body);
+
+    if (!verifyReferralSignature({ memberName, memberEmail, referralCode, signature })) {
+      return NextResponse.json(
+        { error: { code: "FORBIDDEN", message: "Invalid referral signature" } },
+        { status: 403 },
+      );
+    }
 
     const referrals = prospects.map((prospect) => ({
       memberName,
@@ -63,7 +69,7 @@ export async function POST(req: NextRequest) {
       await sendReferralEmails({ prospects, referralCode, memberName });
     }
 
-    console.error("[AUDIT] createReferrals", referralCode, newReferrals.length);
+    console.info("[AUDIT] createReferrals", referralCode, newReferrals.length);
 
     const responseBody = { message: "Referrals created successfully!", referrals: newReferrals };
 
