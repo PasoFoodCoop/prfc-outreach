@@ -17,13 +17,18 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    console.warn("[AUTH_CALLBACK] pre getSecret", ip);
     getSecret();
   } catch {
+
+    console.warn("[AUTH_CALLBACK]  getSecret catch", ip);
     return NextResponse.redirect(new URL("/home", req.url), 303);
   }
 
   const formData = await req.formData();
   const parsed = AuthCallbackSchema.safeParse({ token: formData.get("token") });
+
+  console.warn("[AUTH_CALLBACK] post getSecret pre parsed check", ip);
 
   if (!parsed.success) {
     console.warn("[AUTH_CALLBACK] missing or malformed token", ip);
