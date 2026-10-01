@@ -7,8 +7,6 @@ generator client {
 
 datasource db {
   provider = "mysql"
-  //test forced url
-  url = env("DATABASE_URL")
 }
 
 model Referral {
